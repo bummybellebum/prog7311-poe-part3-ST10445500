@@ -12,7 +12,7 @@ namespace GLMS.Api.Services
     public interface IClientService
     {
         //retrieves all clients from the database
-        Task<List<Client>> GetAllAsync();
+        Task<List<Client>> GetAllAsync(string? search = null);
 
         //retrieves a single client by ID
         Task<Client?> GetByIdAsync(int id);
@@ -46,9 +46,9 @@ namespace GLMS.Api.Services
         //..............................................................................//
 
         //retrieves all clients from the database.
-        public async Task<List<Client>> GetAllAsync()
+        public async Task<List<Client>> GetAllAsync(string? search = null)
         {
-            return await _clientRepository.GetAllAsync();
+            return await _clientRepository.GetClientsAsync(search);
         }
 
         //..............................................................................//

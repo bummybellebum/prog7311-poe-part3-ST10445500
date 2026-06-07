@@ -12,7 +12,7 @@ namespace GLMS.Api.Services
     public interface IServiceRequestService
     {
         //retrieves all service requests from the database
-        Task<List<ServiceRequest>> GetAllAsync();
+        Task<List<ServiceRequest>> GetAllAsync(int? contractId = null, int? statusId = null);
 
         //retrieves a single service request by ID.
         Task<ServiceRequest?> GetByIdAsync(int id);
@@ -56,9 +56,9 @@ namespace GLMS.Api.Services
         //..............................................................................//
 
         //retrieves all service requests from the database
-        public async Task<List<ServiceRequest>> GetAllAsync()
+        public async Task<List<ServiceRequest>> GetAllAsync(int? contractId = null, int? statusId = null)
         {
-            return await _serviceRequestRepository.GetAllAsync();
+            return await _serviceRequestRepository.GetFilteredServiceRequestsAsync(contractId, statusId);
         }
 
         //..............................................................................//

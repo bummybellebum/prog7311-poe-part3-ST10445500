@@ -34,19 +34,8 @@ namespace GLMS.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetServiceRequests(int? contractId = null, int? statusId = null)
         {
-            var requests = await _serviceRequestService.GetAllAsync();
-
-            if (contractId.HasValue)
-            {
-                requests = requests.Where(r => r.ContractId == contractId.Value).ToList();
-            }
-
-            if (statusId.HasValue)
-            {
-                requests = requests.Where(r => r.ServiceRequestStatusId == statusId.Value).ToList();
-            }
-
-            return Ok(requests.OrderByDescending(r => r.RequestedAt).Select(r => r.ToListDto()).ToList());
+            var requests = await _serviceRequestService.GetAllAsync(contractId, statusId);
+            return Ok(requests.Select(r => r.ToListDto()).ToList());
         }
 
         //..............................................................................//

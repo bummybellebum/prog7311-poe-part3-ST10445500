@@ -12,6 +12,7 @@ namespace GLMS.Api.Data.Repositories
     public interface IServiceRequestRepository : IRepository<ServiceRequest>
     {
         Task<ServiceRequest?> GetServiceRequestWithDetailsAsync(int requestId);
+        Task<List<ServiceRequest>> GetFilteredServiceRequestsAsync(int? contractId = null, int? statusId = null);
         Task<List<ServiceRequest>> GetServiceRequestsByContractAsync(int contractId);
         Task<List<ServiceRequest>> GetServiceRequestsByStatusAsync(int statusId);
         Task<List<ServiceRequest>> GetServiceRequestsByRequestedUserAsync(string userId);
@@ -31,11 +32,7 @@ namespace GLMS.Api.Data.Repositories
 
         public override async Task<List<ServiceRequest>> GetAllAsync()
         {
-            return await _dbSet
-                .AsNoTracking()
-                .Include(sr => sr.Contract)
-                    .ThenInclude(c => c.Client)
-                .Include(sr => sr.ServiceRequestStatus)
+            return await GetServiceRequestListQuery()
                 .OrderByDescending(sr => sr.RequestedAt)
                 .ToListAsync();
         }
@@ -49,9 +46,28 @@ namespace GLMS.Api.Data.Repositories
             return await _dbSet
                 .AsNoTracking()
                 .Include(sr => sr.Contract)
+                    .ThenInclude(c => c.Client)
                 .Include(sr => sr.ServiceRequestStatus)
                 .Include(sr => sr.RequestedByUser)
                 .FirstOrDefaultAsync(sr => sr.ServiceRequestId == requestId);
+        }
+
+        //..............................................................................//
+
+        //gets service requests using optional list filters.
+        public async Task<List<ServiceRequest>> GetFilteredServiceRequestsAsync(int? contractId = null, int? statusId = null)
+        {
+            var query = GetServiceRequestListQuery();
+
+            if (contractId.HasValue)
+                query = query.Where(sr => sr.ContractId == contractId.Value);
+
+            if (statusId.HasValue)
+                query = query.Where(sr => sr.ServiceRequestStatusId == statusId.Value);
+
+            return await query
+                .OrderByDescending(sr => sr.RequestedAt)
+                .ToListAsync();
         }
 
         //..............................................................................//
@@ -61,13 +77,7 @@ namespace GLMS.Api.Data.Repositories
 
         public async Task<List<ServiceRequest>> GetServiceRequestsByContractAsync(int contractId)
         {
-            return await _dbSet
-                .AsNoTracking()
-                .Where(sr => sr.ContractId == contractId)
-                .Include(sr => sr.ServiceRequestStatus)
-                .Include(sr => sr.RequestedByUser)
-                .OrderByDescending(sr => sr.RequestedAt)
-                .ToListAsync();
+            return await GetFilteredServiceRequestsAsync(contractId: contractId);
         }
 
         //..............................................................................//
@@ -75,13 +85,7 @@ namespace GLMS.Api.Data.Repositories
         //gets all service requests that have a certain status.
         public async Task<List<ServiceRequest>> GetServiceRequestsByStatusAsync(int statusId)
         {
-            return await _dbSet
-                .AsNoTracking()
-                .Where(sr => sr.ServiceRequestStatusId == statusId)
-                .Include(sr => sr.Contract)
-                .Include(sr => sr.RequestedByUser)
-                .OrderByDescending(sr => sr.RequestedAt)
-                .ToListAsync();
+            return await GetFilteredServiceRequestsAsync(statusId: statusId);
         }
 
         //..............................................................................//
@@ -93,9 +97,21 @@ namespace GLMS.Api.Data.Repositories
                 .AsNoTracking()
                 .Where(sr => sr.RequestedByUserId == userId)
                 .Include(sr => sr.Contract)
+                    .ThenInclude(c => c.Client)
                 .Include(sr => sr.ServiceRequestStatus)
                 .OrderByDescending(sr => sr.RequestedAt)
                 .ToListAsync();
+        }
+
+        //..............................................................................//
+
+        private IQueryable<ServiceRequest> GetServiceRequestListQuery()
+        {
+            return _dbSet
+                .AsNoTracking()
+                .Include(sr => sr.Contract)
+                    .ThenInclude(c => c.Client)
+                .Include(sr => sr.ServiceRequestStatus);
         }
 
         //..............................................................................//

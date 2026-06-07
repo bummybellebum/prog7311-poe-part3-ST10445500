@@ -42,7 +42,7 @@ namespace GLMS.Api.Controllers
         public async Task<IActionResult> GetContracts(int? statusId = null, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null)
         {
             var contracts = await _contractService.FilterAsync(statusId, startDate, endDate, clientId);
-            return Ok(contracts.OrderByDescending(c => c.CreatedAt).Select(c => c.ToListDto()).ToList());
+            return Ok(contracts.Select(c => c.ToListDto()).ToList());
         }
 
         //..............................................................................//
@@ -266,13 +266,6 @@ namespace GLMS.Api.Controllers
             await using (var stream = System.IO.File.Create(fullPath))
             {
                 await file.CopyToAsync(stream);
-            }
-
-            var existingDocuments = await _contractDocumentService.GetByContractIdAsync(contractId);
-            foreach (var existing in existingDocuments.Where(d => d.IsCurrent))
-            {
-                existing.IsCurrent = false;
-                await _contractDocumentService.UpdateAsync(existing);
             }
 
             var relativeFolder = _configuration["Uploads:SignedAgreementFolder"] ?? "uploads/signed-agreements";

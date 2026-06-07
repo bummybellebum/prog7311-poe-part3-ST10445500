@@ -29,17 +29,8 @@ namespace GLMS.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetClients(string? search = null)
         {
-            var clients = await _clientService.GetAllAsync();
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                clients = clients
-                    .Where(c => c.CompanyName.Contains(search, StringComparison.OrdinalIgnoreCase)
-                             || c.Email.Contains(search, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-            }
-
-            return Ok(clients.OrderBy(c => c.CompanyName).Select(c => c.ToListDto()).ToList());
+            var clients = await _clientService.GetAllAsync(search);
+            return Ok(clients.Select(c => c.ToListDto()).ToList());
         }
 
         //..............................................................................//

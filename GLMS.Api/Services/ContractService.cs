@@ -92,22 +92,7 @@ namespace GLMS.Api.Services
             DateTime? endDate = null,
             int? clientId = null)
         {
-            var contracts = await _contractRepository.GetAllAsync();
-
-            if (statusId.HasValue)
-                contracts = contracts.Where(c => c.ContractStatusId == statusId.Value).ToList();
-
-            if (clientId.HasValue)
-                contracts = contracts.Where(c => c.ClientId == clientId.Value).ToList();
-
-            if (startDate.HasValue && endDate.HasValue)
-                contracts = contracts.Where(c => c.StartDate >= startDate && c.StartDate <= endDate).ToList();
-            else if (startDate.HasValue)
-                contracts = contracts.Where(c => c.StartDate >= startDate).ToList();
-            else if (endDate.HasValue)
-                contracts = contracts.Where(c => c.StartDate <= endDate).ToList();
-
-            return contracts;
+            return await _contractRepository.GetFilteredContractsAsync(statusId, startDate, endDate, clientId);
         }
 
         //..............................................................................//

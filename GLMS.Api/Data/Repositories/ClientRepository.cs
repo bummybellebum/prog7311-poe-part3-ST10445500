@@ -13,6 +13,7 @@ namespace GLMS.Api.Data.Repositories
     //this interface lets us do things with Client data in the database.
     public interface IClientRepository : IRepository<Client>
     {
+        Task<List<Client>> GetClientsAsync(string? search = null);
         Task<Client?> GetClientWithContractsAsync(int clientId);
         Task<bool> IsCompanyNameUniqueAsync(string companyName, int? excludeClientId = null);
     }
@@ -25,6 +26,33 @@ namespace GLMS.Api.Data.Repositories
     {
         public ClientRepository(ApplicationDbContext context) : base(context)
         {
+        }
+
+        //..............................................................................//
+
+        public override async Task<List<Client>> GetAllAsync()
+        {
+            return await GetClientsAsync();
+        }
+
+        //..............................................................................//
+
+        //gets clients for list pages, optionally searched by company name or email.
+        public async Task<List<Client>> GetClientsAsync(string? search = null)
+        {
+            var query = _dbSet.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var normalizedSearch = search.Trim().ToLower();
+                query = query.Where(c =>
+                    c.CompanyName.ToLower().Contains(normalizedSearch) ||
+                    c.Email.ToLower().Contains(normalizedSearch));
+            }
+
+            return await query
+                .OrderBy(c => c.CompanyName)
+                .ToListAsync();
         }
 
         //..............................................................................//

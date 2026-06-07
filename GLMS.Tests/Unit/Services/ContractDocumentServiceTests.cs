@@ -35,6 +35,7 @@ namespace GLMS.Tests.Unit.Services
             // Arrange
             var documentRepository = new Mock<IContractDocumentRepository>();
             var contractRepository = new Mock<IContractRepository>();
+            documentRepository.Setup(r => r.MarkCurrentDocumentsInactiveAsync(1)).ReturnsAsync(1);
             contractRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new Contract
             {
                 ContractId = 1,
@@ -63,6 +64,7 @@ namespace GLMS.Tests.Unit.Services
 
             // Assert
             Assert.Equal("contract.pdf", result.OriginalFileName);
+            documentRepository.Verify(r => r.MarkCurrentDocumentsInactiveAsync(1), Times.Once);
             documentRepository.Verify(r => r.AddAsync(document), Times.Once);
             documentRepository.Verify(r => r.SaveChangesAsync(), Times.Once);
         }

@@ -114,6 +114,11 @@ namespace GLMS.Api.Services
 
             document.UploadedAt = DateTime.UtcNow;
 
+            if (document.IsCurrent)
+            {
+                await _documentRepository.MarkCurrentDocumentsInactiveAsync(document.ContractId);
+            }
+
             await _documentRepository.AddAsync(document);
             await _documentRepository.SaveChangesAsync();
 
