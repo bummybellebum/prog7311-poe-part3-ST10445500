@@ -1,3 +1,5 @@
+using GLMS.Api.DTOs;
+using GLMS.Api.DTOs.Clients;
 using GLMS.Api.Models;
 using GLMS.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -37,7 +39,7 @@ namespace GLMS.Api.Controllers
                     .ToList();
             }
 
-            return Ok(clients.OrderBy(c => c.CompanyName).ToList());
+            return Ok(clients.OrderBy(c => c.CompanyName).Select(c => c.ToListDto()).ToList());
         }
 
         //..............................................................................//
@@ -46,18 +48,19 @@ namespace GLMS.Api.Controllers
         public async Task<IActionResult> GetClient(int id)
         {
             var client = await _clientService.GetWithContractsAsync(id);
-            return client == null ? NotFound() : Ok(client);
+            return client == null ? NotFound() : Ok(client.ToDetailDto());
         }
 
         //..............................................................................//
 
         [HttpPost]
-        public async Task<IActionResult> Create(Client client)
+        public async Task<IActionResult> Create(CreateClientDto dto)
         {
             try
             {
+                var client = dto.ToEntity();
                 var created = await _clientService.CreateAsync(client);
-                return CreatedAtAction(nameof(GetClient), new { id = created.ClientId }, created);
+                return CreatedAtAction(nameof(GetClient), new { id = created.ClientId }, created.ToListDto());
             }
             catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
             {
@@ -68,15 +71,22 @@ namespace GLMS.Api.Controllers
         //..............................................................................//
 
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update(int id, Client client)
+        public async Task<IActionResult> Update(int id, UpdateClientDto dto)
         {
-            if (id != client.ClientId)
+            if (id != dto.ClientId)
             {
                 return BadRequest(new { errors = new[] { "Client ID does not match." } });
             }
 
             try
             {
+                var client = await _clientService.GetByIdAsync(id);
+                if (client == null)
+                {
+                    return NotFound();
+                }
+
+                dto.ApplyTo(client);
                 await _clientService.UpdateAsync(client);
                 return Ok();
             }

@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using GLMS.Api.Data;
+using GLMS.Api.DTOs.Auth;
 using GLMS.Api.Models;
 using GLMS.Api.Services;
-using GLMS.Api.ViewModels.Account;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -24,7 +24,7 @@ namespace GLMS.Tests.Unit.Services
             var fixture = CreateFixture();
             await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
 
-            var result = await fixture.AccountService.LoginAsync(new LoginViewModel
+            var result = await fixture.AccountService.LoginAsync(new LoginRequestDto
             {
                 Email = "user@glms.local",
                 Password = "Password123!"
@@ -41,7 +41,7 @@ namespace GLMS.Tests.Unit.Services
             var fixture = CreateFixture();
             await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
 
-            var result = await fixture.AccountService.LoginAsync(new LoginViewModel
+            var result = await fixture.AccountService.LoginAsync(new LoginRequestDto
             {
                 Email = "user@glms.local",
                 Password = "WrongPassword123!"
@@ -59,7 +59,7 @@ namespace GLMS.Tests.Unit.Services
             var fixture = CreateFixture();
             await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: false);
 
-            var result = await fixture.AccountService.LoginAsync(new LoginViewModel
+            var result = await fixture.AccountService.LoginAsync(new LoginRequestDto
             {
                 Email = "user@glms.local",
                 Password = "Password123!"
@@ -76,7 +76,7 @@ namespace GLMS.Tests.Unit.Services
         {
             var fixture = CreateFixture();
 
-            var result = await fixture.AccountService.CreateUserAsync(new AdminUserCreateViewModel
+            var result = await fixture.AccountService.CreateUserAsync(new CreateAdminUserDto
             {
                 FirstName = "Logistics",
                 LastName = "Manager",
@@ -104,7 +104,7 @@ namespace GLMS.Tests.Unit.Services
             await fixture.CreateUserAsync("admin@glms.local", "Password123!", ApplicationRoles.Admin, isActive: true);
             var user = await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
 
-            var result = await fixture.AccountService.UpdateUserAsync(new AdminUserEditViewModel
+            var result = await fixture.AccountService.UpdateUserAsync(new UpdateAdminUserDto
             {
                 UserId = user.Id,
                 FirstName = "Updated",
@@ -132,7 +132,7 @@ namespace GLMS.Tests.Unit.Services
             var fixture = CreateFixture();
             var user = await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
 
-            var result = await fixture.AccountService.ChangePasswordAsync(CreatePrincipal(user), new ChangePasswordViewModel
+            var result = await fixture.AccountService.ChangePasswordAsync(CreatePrincipal(user), new ChangePasswordRequestDto
             {
                 CurrentPassword = "Password123!",
                 NewPassword = "NewPassword123!",
@@ -151,7 +151,7 @@ namespace GLMS.Tests.Unit.Services
             var fixture = CreateFixture();
             var user = await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
 
-            var result = await fixture.AccountService.ChangePasswordAsync(CreatePrincipal(user), new ChangePasswordViewModel
+            var result = await fixture.AccountService.ChangePasswordAsync(CreatePrincipal(user), new ChangePasswordRequestDto
             {
                 CurrentPassword = "WrongPassword123!",
                 NewPassword = "NewPassword123!",
@@ -169,7 +169,7 @@ namespace GLMS.Tests.Unit.Services
             var fixture = CreateFixture();
             var user = await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
 
-            var result = await fixture.AccountService.ResetPasswordAsync(new AdminResetPasswordViewModel
+            var result = await fixture.AccountService.ResetPasswordAsync(new ResetAdminPasswordDto
             {
                 UserId = user.Id,
                 TemporaryPassword = "Temporary123!",

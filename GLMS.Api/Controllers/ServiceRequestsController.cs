@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using GLMS.Api.DTOs;
+using GLMS.Api.DTOs.ServiceRequests;
 using GLMS.Api.Models;
 using GLMS.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -44,7 +46,7 @@ namespace GLMS.Api.Controllers
                 requests = requests.Where(r => r.ServiceRequestStatusId == statusId.Value).ToList();
             }
 
-            return Ok(requests.OrderByDescending(r => r.RequestedAt).ToList());
+            return Ok(requests.OrderByDescending(r => r.RequestedAt).Select(r => r.ToListDto()).ToList());
         }
 
         //..............................................................................//
@@ -53,19 +55,20 @@ namespace GLMS.Api.Controllers
         public async Task<IActionResult> GetServiceRequest(int id)
         {
             var request = await _serviceRequestService.GetDetailsAsync(id);
-            return request == null ? NotFound() : Ok(request);
+            return request == null ? NotFound() : Ok(request.ToDetailDto());
         }
 
         //..............................................................................//
 
         [HttpPost]
-        public async Task<IActionResult> Create(ServiceRequest serviceRequest)
+        public async Task<IActionResult> Create(CreateServiceRequestDto dto)
         {
             try
             {
-                serviceRequest.RequestedByUserId = GetUserId();
+                var serviceRequest = dto.ToEntity(GetUserId());
                 var created = await _serviceRequestService.CreateAsync(serviceRequest);
-                return CreatedAtAction(nameof(GetServiceRequest), new { id = created.ServiceRequestId }, created);
+                var detail = await _serviceRequestService.GetDetailsAsync(created.ServiceRequestId);
+                return CreatedAtAction(nameof(GetServiceRequest), new { id = created.ServiceRequestId }, (detail ?? created).ToDetailDto());
             }
             catch (KeyNotFoundException)
             {
@@ -80,15 +83,22 @@ namespace GLMS.Api.Controllers
         //..............................................................................//
 
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update(int id, ServiceRequest serviceRequest)
+        public async Task<IActionResult> Update(int id, UpdateServiceRequestDto dto)
         {
-            if (id != serviceRequest.ServiceRequestId)
+            if (id != dto.ServiceRequestId)
             {
                 return BadRequest(new { errors = new[] { "Service request ID does not match." } });
             }
 
             try
             {
+                var serviceRequest = await _serviceRequestService.GetByIdAsync(id);
+                if (serviceRequest == null)
+                {
+                    return NotFound();
+                }
+
+                dto.ApplyTo(serviceRequest);
                 await _serviceRequestService.UpdateAsync(serviceRequest);
                 return Ok();
             }

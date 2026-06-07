@@ -1,6 +1,6 @@
+using GLMS.Api.DTOs.Auth;
 using GLMS.Api.Models;
 using GLMS.Api.Services;
-using GLMS.Api.ViewModels.Account;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -43,44 +43,44 @@ namespace GLMS.Api.Controllers
         //..............................................................................//
 
         [HttpPost]
-        public async Task<IActionResult> Create(AdminUserCreateViewModel vm)
+        public async Task<IActionResult> Create(CreateAdminUserDto dto)
         {
-            var result = await _accountService.CreateUserAsync(vm);
+            var result = await _accountService.CreateUserAsync(dto);
             return result.Succeeded ? Created(string.Empty, null) : BadRequest(new { errors = result.Errors });
         }
 
         //..............................................................................//
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, AdminUserEditViewModel vm)
+        public async Task<IActionResult> Update(string id, UpdateAdminUserDto dto)
         {
-            if (id != vm.UserId)
+            if (id != dto.UserId)
             {
                 return BadRequest(new { errors = new[] { "User ID does not match." } });
             }
 
-            var result = await _accountService.UpdateUserAsync(vm);
+            var result = await _accountService.UpdateUserAsync(dto);
             return result.Succeeded ? Ok() : BadRequest(new { errors = result.Errors });
         }
 
         //..............................................................................//
 
         [HttpPost("{id}/reset-password")]
-        public async Task<IActionResult> ResetPassword(string id, AdminResetPasswordViewModel vm)
+        public async Task<IActionResult> ResetPassword(string id, ResetAdminPasswordDto dto)
         {
-            if (id != vm.UserId)
+            if (id != dto.UserId)
             {
                 return BadRequest(new { errors = new[] { "User ID does not match." } });
             }
 
-            var result = await _accountService.ResetPasswordAsync(vm);
+            var result = await _accountService.ResetPasswordAsync(dto);
             return result.Succeeded ? Ok() : BadRequest(new { errors = result.Errors });
         }
 
         //..............................................................................//
 
         [HttpPatch("{id}/active")]
-        public async Task<IActionResult> SetActive(string id, UserActiveDto dto)
+        public async Task<IActionResult> SetActive(string id, UpdateUserActiveDto dto)
         {
             var result = await _accountService.SetUserActiveAsync(id, dto.IsActive);
             return result.Succeeded ? Ok() : BadRequest(new { errors = result.Errors });
@@ -89,10 +89,6 @@ namespace GLMS.Api.Controllers
         //..............................................................................//
     }
 
-    public class UserActiveDto
-    {
-        public bool IsActive { get; set; }
-    }
 }
 
 //.....................................o0oEND OF FILEo0o..........................................//

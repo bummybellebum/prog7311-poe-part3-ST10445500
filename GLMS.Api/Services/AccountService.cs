@@ -1,6 +1,6 @@
 using System.Security.Claims;
+using GLMS.Api.DTOs.Auth;
 using GLMS.Api.Models;
-using GLMS.Api.ViewModels.Account;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,9 +26,9 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        public async Task<LoginResult> LoginAsync(LoginViewModel vm)
+        public async Task<LoginResult> LoginAsync(LoginRequestDto dto)
         {
-            var email = vm.Email.Trim();
+            var email = dto.Email.Trim();
             var user = await _userManager.FindByEmailAsync(email);
 
             if (user == null)
@@ -41,10 +41,10 @@ namespace GLMS.Api.Services
                 return LoginResult.FailedLogin("This account is inactive. Please contact an administrator.");
             }
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user, vm.Password, lockoutOnFailure: true);
+            var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
             if (result.Succeeded)
             {
-                await _signInManager.SignInAsync(user, vm.RememberMe);
+                await _signInManager.SignInAsync(user, dto.RememberMe);
                 return LoginResult.SuccessLogin();
             }
 
@@ -70,7 +70,7 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        public async Task<ProfileViewModel?> GetProfileAsync(ClaimsPrincipal user)
+        public async Task<UpdateProfileRequestDto?> GetProfileAsync(ClaimsPrincipal user)
         {
             var appUser = await _userManager.GetUserAsync(user);
             if (appUser == null)
@@ -78,7 +78,7 @@ namespace GLMS.Api.Services
                 return null;
             }
 
-            return new ProfileViewModel
+            return new UpdateProfileRequestDto
             {
                 FirstName = appUser.FirstName,
                 LastName = appUser.LastName,
@@ -88,7 +88,7 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        public async Task<AccountResult> UpdateProfileAsync(ClaimsPrincipal user, ProfileViewModel vm)
+        public async Task<AccountResult> UpdateProfileAsync(ClaimsPrincipal user, UpdateProfileRequestDto dto)
         {
             var appUser = await _userManager.GetUserAsync(user);
             if (appUser == null)
@@ -96,8 +96,8 @@ namespace GLMS.Api.Services
                 return AccountResult.Failed("Unable to find the signed-in user.");
             }
 
-            appUser.FirstName = vm.FirstName;
-            appUser.LastName = vm.LastName;
+            appUser.FirstName = dto.FirstName;
+            appUser.LastName = dto.LastName;
 
             var result = await _userManager.UpdateAsync(appUser);
             if (!result.Succeeded)
@@ -111,7 +111,7 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        public async Task<AccountResult> ChangePasswordAsync(ClaimsPrincipal user, ChangePasswordViewModel vm)
+        public async Task<AccountResult> ChangePasswordAsync(ClaimsPrincipal user, ChangePasswordRequestDto dto)
         {
             var appUser = await _userManager.GetUserAsync(user);
             if (appUser == null)
@@ -119,7 +119,7 @@ namespace GLMS.Api.Services
                 return AccountResult.Failed("Unable to find the signed-in user.");
             }
 
-            var result = await _userManager.ChangePasswordAsync(appUser, vm.CurrentPassword, vm.NewPassword);
+            var result = await _userManager.ChangePasswordAsync(appUser, dto.CurrentPassword, dto.NewPassword);
             if (!result.Succeeded)
             {
                 return ToAccountResult(result);
@@ -131,17 +131,17 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        public async Task<IReadOnlyList<AdminUserListItemViewModel>> GetUsersAsync()
+        public async Task<IReadOnlyList<AdminUserListDto>> GetUsersAsync()
         {
             var users = await _userManager.Users
                 .OrderBy(u => u.Email)
                 .ToListAsync();
 
-            var result = new List<AdminUserListItemViewModel>();
+            var result = new List<AdminUserListDto>();
             foreach (var user in users)
             {
                 var roles = await _userManager.GetRolesAsync(user);
-                result.Add(new AdminUserListItemViewModel
+                result.Add(new AdminUserListDto
                 {
                     UserId = user.Id,
                     Email = user.Email ?? string.Empty,
@@ -158,7 +158,7 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        public async Task<AdminUserEditViewModel?> GetUserForEditAsync(string userId)
+        public async Task<AdminUserDetailDto?> GetUserForEditAsync(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
@@ -167,7 +167,7 @@ namespace GLMS.Api.Services
             }
 
             var roles = await _userManager.GetRolesAsync(user);
-            return new AdminUserEditViewModel
+            return new AdminUserDetailDto
             {
                 UserId = user.Id,
                 FirstName = user.FirstName,
@@ -180,32 +180,32 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        public async Task<AccountResult> CreateUserAsync(AdminUserCreateViewModel vm)
+        public async Task<AccountResult> CreateUserAsync(CreateAdminUserDto dto)
         {
-            if (!IsSupportedRole(vm.Role))
+            if (!IsSupportedRole(dto.Role))
             {
                 return AccountResult.Failed("The selected role is not supported.");
             }
 
-            var email = vm.Email.Trim();
+            var email = dto.Email.Trim();
             var user = new ApplicationUser
             {
                 UserName = email,
                 Email = email,
                 EmailConfirmed = true,
-                FirstName = vm.FirstName,
-                LastName = vm.LastName,
-                IsActive = vm.IsActive,
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                IsActive = dto.IsActive,
                 CreatedAt = DateTime.UtcNow
             };
 
-            var createResult = await _userManager.CreateAsync(user, vm.TemporaryPassword);
+            var createResult = await _userManager.CreateAsync(user, dto.TemporaryPassword);
             if (!createResult.Succeeded)
             {
                 return ToAccountResult(createResult);
             }
 
-            var roleResult = await _userManager.AddToRoleAsync(user, vm.Role);
+            var roleResult = await _userManager.AddToRoleAsync(user, dto.Role);
             if (!roleResult.Succeeded)
             {
                 return ToAccountResult(roleResult);
@@ -216,34 +216,34 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        public async Task<AccountResult> UpdateUserAsync(AdminUserEditViewModel vm)
+        public async Task<AccountResult> UpdateUserAsync(UpdateAdminUserDto dto)
         {
-            if (!IsSupportedRole(vm.Role))
+            if (!IsSupportedRole(dto.Role))
             {
                 return AccountResult.Failed("The selected role is not supported.");
             }
 
-            var user = await _userManager.FindByIdAsync(vm.UserId);
+            var user = await _userManager.FindByIdAsync(dto.UserId);
             if (user == null)
             {
                 return AccountResult.Failed("User not found.");
             }
 
-            if (!vm.IsActive && await IsLastActiveAdminAsync(user))
+            if (!dto.IsActive && await IsLastActiveAdminAsync(user))
             {
                 return AccountResult.Failed("At least one active admin account is required.");
             }
 
-            if (vm.Role != ApplicationRoles.Admin && await IsLastActiveAdminAsync(user))
+            if (dto.Role != ApplicationRoles.Admin && await IsLastActiveAdminAsync(user))
             {
                 return AccountResult.Failed("At least one active admin account is required.");
             }
 
-            user.FirstName = vm.FirstName;
-            user.LastName = vm.LastName;
-            user.Email = vm.Email.Trim();
+            user.FirstName = dto.FirstName;
+            user.LastName = dto.LastName;
+            user.Email = dto.Email.Trim();
             user.UserName = user.Email;
-            user.IsActive = vm.IsActive;
+            user.IsActive = dto.IsActive;
 
             var updateResult = await _userManager.UpdateAsync(user);
             if (!updateResult.Succeeded)
@@ -258,7 +258,7 @@ namespace GLMS.Api.Services
                 return ToAccountResult(removeResult);
             }
 
-            var addResult = await _userManager.AddToRoleAsync(user, vm.Role);
+            var addResult = await _userManager.AddToRoleAsync(user, dto.Role);
             return addResult.Succeeded ? AccountResult.Success() : ToAccountResult(addResult);
         }
 
@@ -284,16 +284,16 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        public async Task<AccountResult> ResetPasswordAsync(AdminResetPasswordViewModel vm)
+        public async Task<AccountResult> ResetPasswordAsync(ResetAdminPasswordDto dto)
         {
-            var user = await _userManager.FindByIdAsync(vm.UserId);
+            var user = await _userManager.FindByIdAsync(dto.UserId);
             if (user == null)
             {
                 return AccountResult.Failed("User not found.");
             }
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var result = await _userManager.ResetPasswordAsync(user, token, vm.TemporaryPassword);
+            var result = await _userManager.ResetPasswordAsync(user, token, dto.TemporaryPassword);
             return result.Succeeded ? AccountResult.Success() : ToAccountResult(result);
         }
 

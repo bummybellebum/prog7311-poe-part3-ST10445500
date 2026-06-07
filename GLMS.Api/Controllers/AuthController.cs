@@ -1,8 +1,8 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using GLMS.Api.DTOs.Auth;
 using GLMS.Api.Models;
-using GLMS.Api.ViewModels.Account;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -34,12 +34,12 @@ namespace GLMS.Api.Controllers
 
         [AllowAnonymous]
         [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginViewModel vm)
+        public async Task<IActionResult> Login(LoginRequestDto dto)
         {
-            var email = vm.Email.Trim();
+            var email = dto.Email.Trim();
             var user = await _userManager.FindByEmailAsync(email);
 
-            if (user == null || !await _userManager.CheckPasswordAsync(user, vm.Password))
+            if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
             {
                 return Unauthorized(new { errors = new[] { "Invalid login attempt." } });
             }
@@ -68,7 +68,7 @@ namespace GLMS.Api.Controllers
 
         [AllowAnonymous]
         [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterDto dto)
+        public async Task<IActionResult> Register(RegisterRequestDto dto)
         {
             var email = dto.Email.Trim();
             var user = new ApplicationUser
@@ -117,7 +117,7 @@ namespace GLMS.Api.Controllers
         //..............................................................................//
 
         [HttpPut("profile")]
-        public async Task<IActionResult> UpdateProfile(ProfileViewModel vm)
+        public async Task<IActionResult> UpdateProfile(UpdateProfileRequestDto dto)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -125,8 +125,8 @@ namespace GLMS.Api.Controllers
                 return Unauthorized();
             }
 
-            user.FirstName = vm.FirstName;
-            user.LastName = vm.LastName;
+            user.FirstName = dto.FirstName;
+            user.LastName = dto.LastName;
 
             var result = await _userManager.UpdateAsync(user);
             return result.Succeeded
@@ -137,7 +137,7 @@ namespace GLMS.Api.Controllers
         //..............................................................................//
 
         [HttpPost("change-password")]
-        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel vm)
+        public async Task<IActionResult> ChangePassword(ChangePasswordRequestDto dto)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -145,7 +145,7 @@ namespace GLMS.Api.Controllers
                 return Unauthorized();
             }
 
-            var result = await _userManager.ChangePasswordAsync(user, vm.CurrentPassword, vm.NewPassword);
+            var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
             return result.Succeeded
                 ? Ok()
                 : BadRequest(new { errors = result.Errors.Select(e => e.Description) });
@@ -185,24 +185,6 @@ namespace GLMS.Api.Controllers
         //..............................................................................//
     }
 
-    public class RegisterDto
-    {
-        public string? FirstName { get; set; }
-        public string? LastName { get; set; }
-        public string Email { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-    }
-
-    public class AuthResponseDto
-    {
-        public string Token { get; set; } = string.Empty;
-        public DateTime ExpiresAt { get; set; }
-        public string UserId { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string? FirstName { get; set; }
-        public string? LastName { get; set; }
-        public List<string> Roles { get; set; } = new();
-    }
 }
 
 //.....................................o0oEND OF FILEo0o..........................................//

@@ -1,4 +1,7 @@
 using System.Security.Claims;
+using GLMS.Api.DTOs;
+using GLMS.Api.DTOs.Contracts;
+using GLMS.Api.DTOs.Documents;
 using GLMS.Api.Models;
 using GLMS.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -39,7 +42,7 @@ namespace GLMS.Api.Controllers
         public async Task<IActionResult> GetContracts(int? statusId = null, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null)
         {
             var contracts = await _contractService.FilterAsync(statusId, startDate, endDate, clientId);
-            return Ok(contracts.OrderByDescending(c => c.CreatedAt).ToList());
+            return Ok(contracts.OrderByDescending(c => c.CreatedAt).Select(c => c.ToListDto()).ToList());
         }
 
         //..............................................................................//
@@ -48,19 +51,20 @@ namespace GLMS.Api.Controllers
         public async Task<IActionResult> GetContract(int id)
         {
             var contract = await _contractService.GetDetailsAsync(id);
-            return contract == null ? NotFound() : Ok(contract);
+            return contract == null ? NotFound() : Ok(contract.ToDetailDto());
         }
 
         //..............................................................................//
 
         [HttpPost]
-        public async Task<IActionResult> Create(Contract contract)
+        public async Task<IActionResult> Create(CreateContractDto dto)
         {
             try
             {
-                contract.CreatedByUserId = GetUserId();
+                var contract = dto.ToEntity(GetUserId());
                 var created = await _contractService.CreateAsync(contract);
-                return CreatedAtAction(nameof(GetContract), new { id = created.ContractId }, created);
+                var detail = await _contractService.GetDetailsAsync(created.ContractId);
+                return CreatedAtAction(nameof(GetContract), new { id = created.ContractId }, (detail ?? created).ToDetailDto());
             }
             catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException || ex is KeyNotFoundException)
             {
@@ -71,15 +75,22 @@ namespace GLMS.Api.Controllers
         //..............................................................................//
 
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update(int id, Contract contract)
+        public async Task<IActionResult> Update(int id, UpdateContractDto dto)
         {
-            if (id != contract.ContractId)
+            if (id != dto.ContractId)
             {
                 return BadRequest(new { errors = new[] { "Contract ID does not match." } });
             }
 
             try
             {
+                var contract = await _contractService.GetByIdAsync(id);
+                if (contract == null)
+                {
+                    return NotFound();
+                }
+
+                dto.ApplyTo(contract);
                 await _contractService.UpdateAsync(contract);
                 return Ok();
             }
@@ -96,7 +107,7 @@ namespace GLMS.Api.Controllers
         //..............................................................................//
 
         [HttpPatch("{id:int}/status")]
-        public async Task<IActionResult> UpdateStatus(int id, ContractStatusUpdateDto dto)
+        public async Task<IActionResult> UpdateStatus(int id, UpdateContractStatusDto dto)
         {
             var contract = await _contractService.GetByIdAsync(id);
             if (contract == null)
@@ -134,7 +145,8 @@ namespace GLMS.Api.Controllers
         [HttpGet("{contractId:int}/documents")]
         public async Task<IActionResult> GetDocuments(int contractId)
         {
-            return Ok(await _contractDocumentService.GetByContractIdAsync(contractId));
+            var documents = await _contractDocumentService.GetByContractIdAsync(contractId);
+            return Ok(documents.Select(d => d.ToDto()).ToList());
         }
 
         //..............................................................................//
@@ -143,23 +155,24 @@ namespace GLMS.Api.Controllers
         public async Task<IActionResult> GetDocument(int documentId)
         {
             var document = await _contractDocumentService.GetByIdAsync(documentId);
-            return document == null ? NotFound() : Ok(document);
+            return document == null ? NotFound() : Ok(document.ToDto());
         }
 
         //..............................................................................//
 
         [HttpPost("{contractId:int}/documents")]
-        public async Task<IActionResult> CreateDocument(int contractId, ContractDocument document)
+        public async Task<IActionResult> CreateDocument(int contractId, CreateContractDocumentDto dto)
         {
-            if (contractId != document.ContractId)
+            if (contractId != dto.ContractId)
             {
                 return BadRequest(new { errors = new[] { "Contract ID does not match." } });
             }
 
             try
             {
+                var document = dto.ToEntity();
                 var created = await _contractDocumentService.CreateAsync(document);
-                return CreatedAtAction(nameof(GetDocument), new { documentId = created.ContractDocumentId }, created);
+                return CreatedAtAction(nameof(GetDocument), new { documentId = created.ContractDocumentId }, created.ToDto());
             }
             catch (KeyNotFoundException)
             {
@@ -174,15 +187,22 @@ namespace GLMS.Api.Controllers
         //..............................................................................//
 
         [HttpPut("documents/{documentId:int}")]
-        public async Task<IActionResult> UpdateDocument(int documentId, ContractDocument document)
+        public async Task<IActionResult> UpdateDocument(int documentId, UpdateContractDocumentDto dto)
         {
-            if (documentId != document.ContractDocumentId)
+            if (documentId != dto.ContractDocumentId)
             {
                 return BadRequest(new { errors = new[] { "Document ID does not match." } });
             }
 
             try
             {
+                var document = await _contractDocumentService.GetByIdAsync(documentId);
+                if (document == null)
+                {
+                    return NotFound();
+                }
+
+                dto.ApplyTo(document);
                 await _contractDocumentService.UpdateAsync(document);
                 return Ok();
             }
@@ -270,7 +290,7 @@ namespace GLMS.Api.Controllers
             };
 
             var created = await _contractDocumentService.CreateAsync(document);
-            return CreatedAtAction(nameof(GetDocument), new { documentId = created.ContractDocumentId }, created);
+            return CreatedAtAction(nameof(GetDocument), new { documentId = created.ContractDocumentId }, created.ToDto());
         }
 
         //..............................................................................//
@@ -322,10 +342,6 @@ namespace GLMS.Api.Controllers
         //..............................................................................//
     }
 
-    public class ContractStatusUpdateDto
-    {
-        public int ContractStatusId { get; set; }
-    }
 }
 
 //.....................................o0oEND OF FILEo0o..........................................//

@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using GLMS.Api.ViewModels.Account;
+using GLMS.Api.DTOs.Auth;
 
 //ST10445500 - PROG7311 - GLMS POE
 //IAccountService
@@ -10,17 +10,17 @@ namespace GLMS.Api.Services
 {
     public interface IAccountService
     {
-        Task<LoginResult> LoginAsync(LoginViewModel vm);
+        Task<LoginResult> LoginAsync(LoginRequestDto dto);
         Task LogoutAsync();
-        Task<ProfileViewModel?> GetProfileAsync(ClaimsPrincipal user);
-        Task<AccountResult> UpdateProfileAsync(ClaimsPrincipal user, ProfileViewModel vm);
-        Task<AccountResult> ChangePasswordAsync(ClaimsPrincipal user, ChangePasswordViewModel vm);
-        Task<IReadOnlyList<AdminUserListItemViewModel>> GetUsersAsync();
-        Task<AdminUserEditViewModel?> GetUserForEditAsync(string userId);
-        Task<AccountResult> CreateUserAsync(AdminUserCreateViewModel vm);
-        Task<AccountResult> UpdateUserAsync(AdminUserEditViewModel vm);
+        Task<UpdateProfileRequestDto?> GetProfileAsync(ClaimsPrincipal user);
+        Task<AccountResult> UpdateProfileAsync(ClaimsPrincipal user, UpdateProfileRequestDto dto);
+        Task<AccountResult> ChangePasswordAsync(ClaimsPrincipal user, ChangePasswordRequestDto dto);
+        Task<IReadOnlyList<AdminUserListDto>> GetUsersAsync();
+        Task<AdminUserDetailDto?> GetUserForEditAsync(string userId);
+        Task<AccountResult> CreateUserAsync(CreateAdminUserDto dto);
+        Task<AccountResult> UpdateUserAsync(UpdateAdminUserDto dto);
         Task<AccountResult> SetUserActiveAsync(string userId, bool isActive);
-        Task<AccountResult> ResetPasswordAsync(AdminResetPasswordViewModel vm);
+        Task<AccountResult> ResetPasswordAsync(ResetAdminPasswordDto dto);
     }
 }
 
