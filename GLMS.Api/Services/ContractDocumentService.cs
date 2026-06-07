@@ -1,5 +1,8 @@
 using GLMS.Api.Data.Repositories;
 using GLMS.Api.Models;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 
 //ST10445500 - PROG7311 - GLMS POE
 //ContractDocumentService
@@ -28,7 +31,15 @@ namespace GLMS.Api.Services
 
         //removes a document record from the database.
         Task DeleteAsync(int id);
+
+        //uploads a signed agreement PDF and creates a document record.
+        Task<ContractDocument> UploadSignedAgreementAsync(int contractId, IFormFile file, string uploadedByUserId);
+
+        //gets the physical file info needed to download a signed agreement.
+        Task<SignedAgreementDownloadResult?> GetSignedAgreementDownloadAsync(int documentId);
     }
+
+    public record SignedAgreementDownloadResult(string PhysicalPath, string ContentType, string FileName);
 
     //..............................................................................//
 
@@ -38,13 +49,19 @@ namespace GLMS.Api.Services
     {
         private readonly IContractDocumentRepository _documentRepository;
         private readonly IContractRepository _contractRepository;
+        private readonly IWebHostEnvironment _environment;
+        private readonly IConfiguration _configuration;
 
         public ContractDocumentService(
             IContractDocumentRepository documentRepository,
-            IContractRepository contractRepository)
+            IContractRepository contractRepository,
+            IWebHostEnvironment environment,
+            IConfiguration configuration)
         {
             _documentRepository = documentRepository;
             _contractRepository = contractRepository;
+            _environment = environment;
+            _configuration = configuration;
         }
 
         //..............................................................................//
@@ -158,6 +175,251 @@ namespace GLMS.Api.Services
 
             _documentRepository.Delete(document);
             await _documentRepository.SaveChangesAsync();
+        }
+
+        //..............................................................................//
+
+        //uploads a signed agreement PDF, saves it to disk, and stores metadata only.
+        public async Task<ContractDocument> UploadSignedAgreementAsync(int contractId, IFormFile file, string uploadedByUserId)
+        {
+            if (contractId <= 0)
+                throw new ArgumentException("Valid contract ID is required.", nameof(contractId));
+
+            if (string.IsNullOrWhiteSpace(uploadedByUserId))
+                throw new ArgumentException("Uploaded by user is required.", nameof(uploadedByUserId));
+
+            var contract = await _contractRepository.GetByIdAsync(contractId);
+            if (contract == null)
+                throw new KeyNotFoundException($"Contract with ID {contractId} not found.");
+
+            await ValidatePdfFileAsync(file);
+
+            var uploadFolder = GetUploadFolder();
+            Directory.CreateDirectory(uploadFolder);
+
+            var storedFileName = BuildSafeStoredFileName(contractId);
+            var physicalPath = await SaveFileAsync(file, uploadFolder, storedFileName);
+
+            var document = new ContractDocument
+            {
+                ContractId = contractId,
+                DocumentType = "Signed Agreement",
+                OriginalFileName = Path.GetFileName(file.FileName),
+                StoredFileName = storedFileName,
+                FilePath = BuildDatabaseFilePath(storedFileName),
+                ContentType = "application/pdf",
+                FileSizeBytes = file.Length,
+                UploadedByUserId = uploadedByUserId,
+                IsCurrent = true
+            };
+
+            try
+            {
+                return await CreateAsync(document);
+            }
+            catch
+            {
+                if (File.Exists(physicalPath))
+                {
+                    File.Delete(physicalPath);
+                }
+
+                throw;
+            }
+        }
+
+        //..............................................................................//
+
+        //resolves the stored document path for downloading.
+        public async Task<SignedAgreementDownloadResult?> GetSignedAgreementDownloadAsync(int documentId)
+        {
+            if (documentId <= 0)
+                return null;
+
+            var document = await _documentRepository.GetByIdAsync(documentId);
+            if (document == null)
+                return null;
+
+            var physicalPath = ResolvePhysicalPath(document);
+            if (physicalPath == null)
+                return null;
+
+            return new SignedAgreementDownloadResult(
+                physicalPath,
+                string.IsNullOrWhiteSpace(document.ContentType) ? "application/pdf" : document.ContentType,
+                string.IsNullOrWhiteSpace(document.OriginalFileName) ? "signed-agreement.pdf" : document.OriginalFileName);
+        }
+
+        //..............................................................................//
+
+        private async Task ValidatePdfFileAsync(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                throw new ArgumentException("Please select a PDF file to upload.", nameof(file));
+
+            var extension = Path.GetExtension(file.FileName);
+            if (!string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Only PDF files are allowed for signed agreements.", nameof(file));
+
+            var contentType = file.ContentType ?? string.Empty;
+            var validContentType = string.IsNullOrWhiteSpace(contentType)
+                || string.Equals(contentType, "application/pdf", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(contentType, "application/octet-stream", StringComparison.OrdinalIgnoreCase);
+
+            if (!validContentType)
+                throw new ArgumentException("Only PDF files are allowed for signed agreements.", nameof(file));
+
+            var header = new byte[5];
+            await using var stream = file.OpenReadStream();
+            var bytesRead = await stream.ReadAsync(header.AsMemory(0, header.Length));
+            var hasPdfHeader = bytesRead == header.Length
+                && header[0] == '%'
+                && header[1] == 'P'
+                && header[2] == 'D'
+                && header[3] == 'F'
+                && header[4] == '-';
+
+            if (!hasPdfHeader)
+                throw new ArgumentException("Only valid PDF files are allowed for signed agreements.", nameof(file));
+        }
+
+        //..............................................................................//
+
+        private static string BuildSafeStoredFileName(int contractId)
+        {
+            return $"contract-{contractId}-{Guid.NewGuid():N}.pdf";
+        }
+
+        //..............................................................................//
+
+        private async Task<string> SaveFileAsync(IFormFile file, string uploadFolder, string storedFileName)
+        {
+            var fullPath = Path.GetFullPath(Path.Combine(uploadFolder, storedFileName));
+            if (!IsPathInsideBase(fullPath, uploadFolder))
+                throw new InvalidOperationException("Invalid upload path.");
+
+            await using var stream = File.Create(fullPath);
+            await file.CopyToAsync(stream);
+
+            return fullPath;
+        }
+
+        //..............................................................................//
+
+        private string BuildDatabaseFilePath(string storedFileName)
+        {
+            var folder = GetRelativeUploadFolderForDatabase();
+            return $"{folder}/{storedFileName}".Replace("\\", "/");
+        }
+
+        //..............................................................................//
+
+        private string GetUploadFolder()
+        {
+            var configuredFolder = _configuration["Uploads:SignedAgreementFolder"];
+            var folder = string.IsNullOrWhiteSpace(configuredFolder)
+                ? "uploads/signed-agreements"
+                : configuredFolder;
+
+            if (Path.IsPathRooted(folder))
+                return Path.GetFullPath(folder);
+
+            return Path.GetFullPath(Path.Combine(_environment.ContentRootPath, folder));
+        }
+
+        //..............................................................................//
+
+        private string GetRelativeUploadFolderForDatabase()
+        {
+            var configuredFolder = _configuration["Uploads:SignedAgreementFolder"];
+            if (string.IsNullOrWhiteSpace(configuredFolder) || Path.IsPathRooted(configuredFolder))
+                return "uploads/signed-agreements";
+
+            return CleanRelativeFolder(configuredFolder);
+        }
+
+        //..............................................................................//
+
+        private static string CleanRelativeFolder(string folder)
+        {
+            var parts = folder
+                .Replace("\\", "/")
+                .Split('/', StringSplitOptions.RemoveEmptyEntries)
+                .Where(part => part != ".");
+
+            if (parts.Any(part => part == ".."))
+                throw new InvalidOperationException("Invalid upload folder configuration.");
+
+            return string.Join("/", parts);
+        }
+
+        //..............................................................................//
+
+        private string? ResolvePhysicalPath(ContractDocument document)
+        {
+            foreach (var candidate in GetDownloadPathCandidates(document))
+            {
+                var fullPath = Path.GetFullPath(candidate);
+                if (IsSafeDownloadPath(fullPath) && File.Exists(fullPath))
+                {
+                    return fullPath;
+                }
+            }
+
+            return null;
+        }
+
+        //..............................................................................//
+
+        private IEnumerable<string> GetDownloadPathCandidates(ContractDocument document)
+        {
+            var candidates = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(document.FilePath))
+            {
+                var normalizedFilePath = document.FilePath
+                    .Replace("/", Path.DirectorySeparatorChar.ToString())
+                    .Replace("\\", Path.DirectorySeparatorChar.ToString());
+
+                if (Path.IsPathRooted(normalizedFilePath))
+                {
+                    candidates.Add(normalizedFilePath);
+                }
+                else
+                {
+                    candidates.Add(Path.Combine(_environment.ContentRootPath, normalizedFilePath));
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(document.StoredFileName))
+            {
+                candidates.Add(Path.Combine(GetUploadFolder(), Path.GetFileName(document.StoredFileName)));
+            }
+
+            return candidates.Distinct(StringComparer.OrdinalIgnoreCase);
+        }
+
+        //..............................................................................//
+
+        private bool IsSafeDownloadPath(string fullPath)
+        {
+            return IsPathInsideBase(fullPath, _environment.ContentRootPath)
+                || IsPathInsideBase(fullPath, GetUploadFolder());
+        }
+
+        //..............................................................................//
+
+        private static bool IsPathInsideBase(string fullPath, string basePath)
+        {
+            var normalizedFullPath = Path.GetFullPath(fullPath);
+            var normalizedBasePath = Path.GetFullPath(basePath);
+
+            if (!normalizedBasePath.EndsWith(Path.DirectorySeparatorChar))
+            {
+                normalizedBasePath += Path.DirectorySeparatorChar;
+            }
+
+            return normalizedFullPath.StartsWith(normalizedBasePath, StringComparison.OrdinalIgnoreCase);
         }
 
         //..............................................................................//

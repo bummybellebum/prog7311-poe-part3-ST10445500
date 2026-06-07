@@ -21,19 +21,13 @@ namespace GLMS.Api.Controllers
     {
         private readonly IContractService _contractService;
         private readonly IContractDocumentService _contractDocumentService;
-        private readonly IWebHostEnvironment _environment;
-        private readonly IConfiguration _configuration;
 
         public ContractsController(
             IContractService contractService,
-            IContractDocumentService contractDocumentService,
-            IWebHostEnvironment environment,
-            IConfiguration configuration)
+            IContractDocumentService contractDocumentService)
         {
             _contractService = contractService;
             _contractDocumentService = contractDocumentService;
-            _environment = environment;
-            _configuration = configuration;
         }
 
         //..............................................................................//
@@ -241,49 +235,19 @@ namespace GLMS.Api.Controllers
         [HttpPost("{contractId:int}/signed-agreement")]
         public async Task<IActionResult> UploadSignedAgreement(int contractId, IFormFile file)
         {
-            var contract = await _contractService.GetByIdAsync(contractId);
-            if (contract == null)
+            try
+            {
+                var created = await _contractDocumentService.UploadSignedAgreementAsync(contractId, file, GetUserId());
+                return CreatedAtAction(nameof(GetDocument), new { documentId = created.ContractDocumentId }, created.ToDto());
+            }
+            catch (KeyNotFoundException)
             {
                 return NotFound();
             }
-
-            if (file == null || file.Length == 0)
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
             {
-                return BadRequest(new { errors = new[] { "Please select a PDF file to upload." } });
+                return BadRequest(new { errors = new[] { ex.Message } });
             }
-
-            if (!IsValidSignedAgreementPdf(file))
-            {
-                return BadRequest(new { errors = new[] { "Only PDF files are allowed for signed agreements." } });
-            }
-
-            var uploadFolder = GetUploadFolder();
-            Directory.CreateDirectory(uploadFolder);
-
-            var storedFileName = $"contract-{contractId}-{Guid.NewGuid():N}.pdf";
-            var fullPath = Path.Combine(uploadFolder, storedFileName);
-
-            await using (var stream = System.IO.File.Create(fullPath))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            var relativeFolder = _configuration["Uploads:SignedAgreementFolder"] ?? "uploads/signed-agreements";
-            var document = new ContractDocument
-            {
-                ContractId = contractId,
-                DocumentType = "Signed Agreement",
-                OriginalFileName = Path.GetFileName(file.FileName),
-                StoredFileName = storedFileName,
-                FilePath = Path.Combine(relativeFolder, storedFileName).Replace("\\", "/"),
-                ContentType = file.ContentType,
-                FileSizeBytes = file.Length,
-                UploadedByUserId = GetUserId(),
-                IsCurrent = true
-            };
-
-            var created = await _contractDocumentService.CreateAsync(document);
-            return CreatedAtAction(nameof(GetDocument), new { documentId = created.ContractDocumentId }, created.ToDto());
         }
 
         //..............................................................................//
@@ -291,20 +255,13 @@ namespace GLMS.Api.Controllers
         [HttpGet("documents/{documentId:int}/download")]
         public async Task<IActionResult> DownloadAgreement(int documentId)
         {
-            var document = await _contractDocumentService.GetByIdAsync(documentId);
-            if (document == null)
-            {
-                return NotFound();
-            }
-
-            var fullPath = Path.Combine(_environment.ContentRootPath, document.FilePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-            if (!System.IO.File.Exists(fullPath))
+            var file = await _contractDocumentService.GetSignedAgreementDownloadAsync(documentId);
+            if (file == null)
             {
                 return NotFound(new { errors = new[] { "The agreement file could not be found on the server." } });
             }
 
-            var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
-            return File(bytes, document.ContentType ?? "application/pdf", document.OriginalFileName);
+            return PhysicalFile(file.PhysicalPath, file.ContentType, file.FileName);
         }
 
         //..............................................................................//
@@ -313,23 +270,6 @@ namespace GLMS.Api.Controllers
         {
             return User.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? throw new InvalidOperationException("Unable to identify the signed-in user.");
-        }
-
-        private string GetUploadFolder()
-        {
-            var relativeFolder = _configuration["Uploads:SignedAgreementFolder"] ?? "uploads/signed-agreements";
-            return Path.Combine(_environment.ContentRootPath, relativeFolder.Replace("/", Path.DirectorySeparatorChar.ToString()));
-        }
-
-        private static bool IsValidSignedAgreementPdf(IFormFile file)
-        {
-            var extension = Path.GetExtension(file.FileName);
-            var contentType = file.ContentType ?? string.Empty;
-            var isAllowedContentType = string.IsNullOrWhiteSpace(contentType)
-                || string.Equals(contentType, "application/pdf", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(contentType, "application/octet-stream", StringComparison.OrdinalIgnoreCase);
-
-            return string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase) && isAllowedContentType;
         }
 
         //..............................................................................//
