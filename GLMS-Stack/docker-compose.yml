@@ -1,7 +1,8 @@
+name: glms-stack
+
 services:
-  glms-sql-server-db:
+  sql-server-db:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: glms-sql-server-db
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "Your_strong_P@ssw0rd"
@@ -16,36 +17,35 @@ services:
       retries: 12
       start_period: 30s
 
-  glms-backend-api:
+  backend-api:
     build:
       context: ..
       dockerfile: GLMS.Api/Dockerfile
-    container_name: glms-backend-api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: "8080"
     ports:
       - "8080:8080"
     depends_on:
-      glms-sql-server-db:
+      sql-server-db:
         condition: service_healthy
 
-  glms-frontend-web:
+  frontend-web:
     build:
       context: ..
       dockerfile: GLMS.Web/Dockerfile
-    container_name: glms-frontend-web
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: "8080"
-      ConnectionStrings__DefaultConnection: "Server=glms-sql-server-db,1433;Database=GLMSDb;User Id=sa;Password=Your_strong_P@ssw0rd;TrustServerCertificate=True;MultipleActiveResultSets=true"
+      ConnectionStrings__DefaultConnection: "Server=sql-server-db,1433;Database=GLMSDb;User Id=sa;Password=Your_strong_P@ssw0rd;TrustServerCertificate=True;MultipleActiveResultSets=true"
     ports:
       - "8082:8080"
     depends_on:
-      glms-sql-server-db:
+      sql-server-db:
         condition: service_healthy
-      glms-backend-api:
+      backend-api:
         condition: service_started
 
 volumes:
   glms-sql-server-data:
+    name: glms-sql-server-data

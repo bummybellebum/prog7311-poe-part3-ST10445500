@@ -117,11 +117,19 @@ In Visual Studio:
 
 The Compose stack starts:
 
-- `glms-sql-server-db`: SQL Server 2022 on host port `1433`
-- `glms-backend-api`: API container on host port `8080`
-- `glms-frontend-web`: MVC web app on host port `8082`
+- `sql-server-db`: SQL Server 2022 on host port `1433`
+- `backend-api`: API container on host port `8080`
+- `frontend-web`: MVC web app on host port `8082`
+
+The Compose project is named `glms-stack`. Container names are managed by Docker Compose instead of being hard-coded, so Docker Desktop may show names such as `glms-stack-frontend-web-1`. This lets Visual Studio and Docker Compose stop/recreate the stack cleanly.
 
 The web app uses the Docker SQL Server connection string from `GLMS-Stack/docker-compose.yml`. On startup, EF Core runs the migrations against `GLMSDb`, and the default admin account is seeded.
+
+If any containers remain running after stopping Visual Studio, stop the full stack from the repository root with:
+
+```powershell
+docker compose -f GLMS-Stack/docker-compose.yml down
+```
 
 The root `.dockerignore` intentionally stays at the repository root because the Docker build context is the whole repo. Docker only applies `.dockerignore` from the build context root.
 
