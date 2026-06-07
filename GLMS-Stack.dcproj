@@ -3,7 +3,7 @@
   <PropertyGroup Label="Globals">
     <ProjectVersion>2.1</ProjectVersion>
     <DockerTargetOS>Linux</DockerTargetOS>
-    <DockerComposeProjectName>glms-stack</DockerComposeProjectName>
+    <DockerComposeProjectName>st10445500-glms-stack</DockerComposeProjectName>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
     <DockerServiceName>frontend-web</DockerServiceName>
     <DockerServiceUrl>{Scheme}://localhost:{ServicePort}</DockerServiceUrl>

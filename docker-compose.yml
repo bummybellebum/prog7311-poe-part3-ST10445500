@@ -1,4 +1,4 @@
-name: glms-stack
+name: st10445500-glms-stack
 
 services:
   sql-server-db:
@@ -10,7 +10,7 @@ services:
     ports:
       - "14333:1433"
     volumes:
-      - glms-sql-server-data:/var/opt/mssql
+      - sql-server-data:/var/opt/mssql
     networks:
       - glms-network
     healthcheck:
@@ -42,7 +42,7 @@ services:
     ports:
       - "5053:8080"
     volumes:
-      - glms-contract-uploads:/app/uploads/signed-agreements
+      - contract-uploads:/app/uploads/signed-agreements
     networks:
       - glms-network
     depends_on:
@@ -67,8 +67,8 @@ services:
         condition: service_started
 
 volumes:
-  glms-sql-server-data:
-  glms-contract-uploads:
+  sql-server-data:
+  contract-uploads:
 
 networks:
   glms-network:
