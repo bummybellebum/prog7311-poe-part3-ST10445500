@@ -16,15 +16,15 @@ namespace GLMS.Api.Data.Seeding
 			bool forceSeeding)
 		{
 			await SeedRolesAsync(roleManager);
+			await ValidateLookupStatusesAsync(context);
 
 			var users = await SeedUsersAsync(userManager, configuration);
-			var lookupIds = await SeedLookupStatusesAsync(context);
 
 			var clients = await SeedClientsAsync(context);
-			var contracts = await SeedContractsAsync(context, clients, users.ContractManager.Id, lookupIds);
+			var contracts = await SeedContractsAsync(context, clients, users.ContractManager.Id);
 
 			await SeedContractDocumentsAsync(context, contracts, users.Admin.Id, environment);
-			await SeedServiceRequestsAsync(context, contracts, users.LogisticsManager.Id, lookupIds);
+			await SeedServiceRequestsAsync(context, contracts, users.LogisticsManager.Id);
 
 			await context.SaveChangesAsync();
 		}
@@ -157,80 +157,47 @@ namespace GLMS.Api.Data.Seeding
 			return user;
 		}
 
-		private static async Task<SeedLookupIds> SeedLookupStatusesAsync(ApplicationDbContext context)
+		private static async Task ValidateLookupStatusesAsync(ApplicationDbContext context)
 		{
-			await AddContractStatusIfMissingAsync(context, "Draft");
-			await AddContractStatusIfMissingAsync(context, "Active");
-			await AddContractStatusIfMissingAsync(context, "On Hold");
-			await AddContractStatusIfMissingAsync(context, "Expired");
+			bool contractStatusesValid =
+				await context.ContractStatuses.AnyAsync(status =>
+					status.ContractStatusId == ContractStatusConstants.DraftId &&
+					status.StatusName == ContractStatusConstants.DraftName) &&
 
-			await AddServiceRequestStatusIfMissingAsync(context, "Pending");
-			await AddServiceRequestStatusIfMissingAsync(context, "Approved");
-			await AddServiceRequestStatusIfMissingAsync(context, "In Progress");
-			await AddServiceRequestStatusIfMissingAsync(context, "Completed");
-			await AddServiceRequestStatusIfMissingAsync(context, "Cancelled");
+				await context.ContractStatuses.AnyAsync(status =>
+					status.ContractStatusId == ContractStatusConstants.ActiveId &&
+					status.StatusName == ContractStatusConstants.ActiveName) &&
 
-			await context.SaveChangesAsync();
+				await context.ContractStatuses.AnyAsync(status =>
+					status.ContractStatusId == ContractStatusConstants.OnHoldId &&
+					status.StatusName == ContractStatusConstants.OnHoldName) &&
 
-			return new SeedLookupIds
+				await context.ContractStatuses.AnyAsync(status =>
+					status.ContractStatusId == ContractStatusConstants.ExpiredId &&
+					status.StatusName == ContractStatusConstants.ExpiredName);
+
+			bool serviceRequestStatusesValid =
+				await context.ServiceRequestStatuses.AnyAsync(status =>
+					status.ServiceRequestStatusId == ServiceRequestStatusConstants.PendingId &&
+					status.StatusName == ServiceRequestStatusConstants.PendingName) &&
+
+				await context.ServiceRequestStatuses.AnyAsync(status =>
+					status.ServiceRequestStatusId == ServiceRequestStatusConstants.InProgressId &&
+					status.StatusName == ServiceRequestStatusConstants.InProgressName) &&
+
+				await context.ServiceRequestStatuses.AnyAsync(status =>
+					status.ServiceRequestStatusId == ServiceRequestStatusConstants.CompletedId &&
+					status.StatusName == ServiceRequestStatusConstants.CompletedName) &&
+
+				await context.ServiceRequestStatuses.AnyAsync(status =>
+					status.ServiceRequestStatusId == ServiceRequestStatusConstants.CancelledId &&
+					status.StatusName == ServiceRequestStatusConstants.CancelledName);
+
+			if (!contractStatusesValid || !serviceRequestStatusesValid)
 			{
-				ContractDraftId = await GetContractStatusIdAsync(context, "Draft"),
-				ContractActiveId = await GetContractStatusIdAsync(context, "Active"),
-				ContractOnHoldId = await GetContractStatusIdAsync(context, "On Hold"),
-				ContractExpiredId = await GetContractStatusIdAsync(context, "Expired"),
-
-				RequestPendingId = await GetServiceRequestStatusIdAsync(context, "Pending"),
-				RequestApprovedId = await GetServiceRequestStatusIdAsync(context, "Approved"),
-				RequestInProgressId = await GetServiceRequestStatusIdAsync(context, "In Progress"),
-				RequestCompletedId = await GetServiceRequestStatusIdAsync(context, "Completed"),
-				RequestCancelledId = await GetServiceRequestStatusIdAsync(context, "Cancelled")
-			};
-		}
-
-		private static async Task AddContractStatusIfMissingAsync(
-			ApplicationDbContext context,
-			string statusName)
-		{
-			if (!await context.ContractStatuses.AnyAsync(status => status.StatusName == statusName))
-			{
-				context.ContractStatuses.Add(new ContractStatus
-				{
-					StatusName = statusName
-				});
+				throw new InvalidOperationException(
+					"Seed lookup statuses are missing or do not match the application constants.");
 			}
-		}
-
-		private static async Task AddServiceRequestStatusIfMissingAsync(
-			ApplicationDbContext context,
-			string statusName)
-		{
-			if (!await context.ServiceRequestStatuses.AnyAsync(status => status.StatusName == statusName))
-			{
-				context.ServiceRequestStatuses.Add(new ServiceRequestStatus
-				{
-					StatusName = statusName
-				});
-			}
-		}
-
-		private static async Task<int> GetContractStatusIdAsync(
-			ApplicationDbContext context,
-			string statusName)
-		{
-			return await context.ContractStatuses
-				.Where(status => status.StatusName == statusName)
-				.Select(status => status.ContractStatusId)
-				.FirstAsync();
-		}
-
-		private static async Task<int> GetServiceRequestStatusIdAsync(
-			ApplicationDbContext context,
-			string statusName)
-		{
-			return await context.ServiceRequestStatuses
-				.Where(status => status.StatusName == statusName)
-				.Select(status => status.ServiceRequestStatusId)
-				.FirstAsync();
 		}
 
 		private static async Task<Dictionary<string, Client>> SeedClientsAsync(ApplicationDbContext context)
@@ -316,8 +283,7 @@ namespace GLMS.Api.Data.Seeding
 		private static async Task<Dictionary<string, Contract>> SeedContractsAsync(
 			ApplicationDbContext context,
 			Dictionary<string, Client> clients,
-			string createdByUserId,
-			SeedLookupIds lookupIds)
+			string createdByUserId)
 		{
 			var today = DateTime.UtcNow.Date;
 			var now = DateTime.UtcNow;
@@ -328,7 +294,7 @@ namespace GLMS.Api.Data.Seeding
 				{
 					Title = "Global Ocean Freight Agreement",
 					ClientId = clients["Nova Global Freight"].ClientId,
-					ContractStatusId = lookupIds.ContractActiveId,
+					ContractStatusId = ContractStatusConstants.ActiveId,
 					CreatedByUserId = createdByUserId,
 					StartDate = today.AddMonths(-8),
 					EndDate = today.AddMonths(16),
@@ -341,7 +307,7 @@ namespace GLMS.Api.Data.Seeding
 				{
 					Title = "Express Air Freight SLA",
 					ClientId = clients["CapeRoute Imports"].ClientId,
-					ContractStatusId = lookupIds.ContractActiveId,
+					ContractStatusId = ContractStatusConstants.ActiveId,
 					CreatedByUserId = createdByUserId,
 					StartDate = today.AddMonths(-3),
 					EndDate = today.AddMonths(9),
@@ -354,7 +320,7 @@ namespace GLMS.Api.Data.Seeding
 				{
 					Title = "Cross Border Road Freight Contract",
 					ClientId = clients["Sahara Cross-Border Logistics"].ClientId,
-					ContractStatusId = lookupIds.ContractActiveId,
+					ContractStatusId = ContractStatusConstants.ActiveId,
 					CreatedByUserId = createdByUserId,
 					StartDate = today.AddMonths(-5),
 					EndDate = today.AddMonths(7),
@@ -367,7 +333,7 @@ namespace GLMS.Api.Data.Seeding
 				{
 					Title = "Cold Chain Pharmaceutical Contract",
 					ClientId = clients["Pacific Cold Chain"].ClientId,
-					ContractStatusId = lookupIds.ContractOnHoldId,
+					ContractStatusId = ContractStatusConstants.OnHoldId,
 					CreatedByUserId = createdByUserId,
 					StartDate = today.AddMonths(-2),
 					EndDate = today.AddMonths(10),
@@ -380,7 +346,7 @@ namespace GLMS.Api.Data.Seeding
 				{
 					Title = "Legacy Port Handling Contract",
 					ClientId = clients["EuroBridge Distribution"].ClientId,
-					ContractStatusId = lookupIds.ContractExpiredId,
+					ContractStatusId = ContractStatusConstants.ExpiredId,
 					CreatedByUserId = createdByUserId,
 					StartDate = today.AddMonths(-18),
 					EndDate = today.AddMonths(-1),
@@ -393,7 +359,7 @@ namespace GLMS.Api.Data.Seeding
 				{
 					Title = "Draft Warehousing Proposal",
 					ClientId = clients["CapeRoute Imports"].ClientId,
-					ContractStatusId = lookupIds.ContractDraftId,
+					ContractStatusId = ContractStatusConstants.DraftId,
 					CreatedByUserId = createdByUserId,
 					StartDate = today.AddMonths(1),
 					EndDate = today.AddMonths(13),
@@ -464,8 +430,7 @@ namespace GLMS.Api.Data.Seeding
 		private static async Task SeedServiceRequestsAsync(
 			ApplicationDbContext context,
 			Dictionary<string, Contract> contracts,
-			string requestedByUserId,
-			SeedLookupIds lookupIds)
+			string requestedByUserId)
 		{
 			var today = DateTime.UtcNow.Date;
 
@@ -474,7 +439,7 @@ namespace GLMS.Api.Data.Seeding
 				CreateServiceRequest(
 					contracts["Global Ocean Freight Agreement"].ContractId,
 					requestedByUserId,
-					lookupIds.RequestApprovedId,
+					ServiceRequestStatusConstants.InProgressId,
 					"Arrange Durban to Rotterdam container shipment",
 					12500m,
 					"USD",
@@ -484,7 +449,7 @@ namespace GLMS.Api.Data.Seeding
 				CreateServiceRequest(
 					contracts["Global Ocean Freight Agreement"].ContractId,
 					requestedByUserId,
-					lookupIds.RequestInProgressId,
+					ServiceRequestStatusConstants.InProgressId,
 					"Schedule customs clearance for European delivery",
 					4300m,
 					"EUR",
@@ -494,7 +459,7 @@ namespace GLMS.Api.Data.Seeding
 				CreateServiceRequest(
 					contracts["Express Air Freight SLA"].ContractId,
 					requestedByUserId,
-					lookupIds.RequestPendingId,
+					ServiceRequestStatusConstants.PendingId,
 					"Book express air freight for urgent electronics shipment",
 					7200m,
 					"USD",
@@ -504,7 +469,7 @@ namespace GLMS.Api.Data.Seeding
 				CreateServiceRequest(
 					contracts["Cross Border Road Freight Contract"].ContractId,
 					requestedByUserId,
-					lookupIds.RequestCompletedId,
+					ServiceRequestStatusConstants.CompletedId,
 					"Arrange Johannesburg to Gaborone road freight delivery",
 					38500m,
 					"ZAR",
@@ -581,12 +546,18 @@ namespace GLMS.Api.Data.Seeding
 
 		private static byte[] BuildDemoPdfBytes(string contractTitle)
 		{
-			var safeTitle = contractTitle
-				.Replace("\\", "")
-				.Replace("(", "")
-				.Replace(")", "");
+			var escapedTitle = EscapePdfText(contractTitle);
 
-			var stream = $"BT /F1 16 Tf 72 720 Td (GLMS Demo Signed Agreement) Tj 0 -28 Td ({safeTitle}) Tj 0 -28 Td (Generated for lecturer demonstration data.) Tj ET";
+			var stream =
+				"BT " +
+				"/F1 16 Tf " +
+				"72 720 Td " +
+				"(GLMS Demo Signed Agreement) Tj " +
+				"0 -28 Td " +
+				$"({escapedTitle}) Tj " +
+				"0 -28 Td " +
+				"(Generated for lecturer demonstration data.) Tj " +
+				"ET";
 
 			var objects = new[]
 			{
@@ -594,7 +565,7 @@ namespace GLMS.Api.Data.Seeding
 				"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
 				"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
 				"4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
-				$"5 0 obj\n<< /Length {stream.Length} >>\nstream\n{stream}\nendstream\nendobj\n"
+				$"5 0 obj\n<< /Length {Encoding.ASCII.GetByteCount(stream)} >>\nstream\n{stream}\nendstream\nendobj\n"
 			};
 
 			var builder = new StringBuilder();
@@ -628,6 +599,14 @@ namespace GLMS.Api.Data.Seeding
 			return Encoding.ASCII.GetBytes(builder.ToString());
 		}
 
+		private static string EscapePdfText(string value)
+		{
+			return value
+				.Replace("\\", "\\\\")
+				.Replace("(", "\\(")
+				.Replace(")", "\\)");
+		}
+
 		private static string ToSafeFileName(string value)
 		{
 			var characters = value
@@ -657,27 +636,6 @@ namespace GLMS.Api.Data.Seeding
 			public ApplicationUser LogisticsManager { get; set; } = null!;
 
 			public ApplicationUser ContractManager { get; set; } = null!;
-		}
-
-		private sealed class SeedLookupIds
-		{
-			public int ContractDraftId { get; set; }
-
-			public int ContractActiveId { get; set; }
-
-			public int ContractOnHoldId { get; set; }
-
-			public int ContractExpiredId { get; set; }
-
-			public int RequestPendingId { get; set; }
-
-			public int RequestApprovedId { get; set; }
-
-			public int RequestInProgressId { get; set; }
-
-			public int RequestCompletedId { get; set; }
-
-			public int RequestCancelledId { get; set; }
 		}
 
 		private sealed record DemoFile(string RelativePath, long SizeBytes);
