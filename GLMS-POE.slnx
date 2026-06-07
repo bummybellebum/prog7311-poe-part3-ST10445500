@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
   <Project Path="GLMS-Stack/GLMS-Stack.dcproj" Id="a28f34fb-8041-4e76-9c55-4b68d8f5e25f">
     <Build />
   </Project>
