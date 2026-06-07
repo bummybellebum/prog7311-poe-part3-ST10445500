@@ -9,12 +9,13 @@ namespace GLMS.Api.Data.Seeding
 			ApplicationDbContext context,
 			UserManager<ApplicationUser> userManager,
 			RoleManager<IdentityRole> roleManager,
+			IConfiguration configuration,
 			bool forceSeeding)
 		{
 			await SeedRolesAsync(roleManager);
-			await SeedUsersAsync(userManager);
+			await SeedDefaultAdminAsync(userManager, configuration);
 
-			// Later we will add the real demo data here:
+			// Later we add the demo app data here:
 			// await SeedClientsAsync(context);
 			// await SeedContractsAsync(context);
 			// await SeedServiceRequestsAsync(context);
@@ -25,31 +26,79 @@ namespace GLMS.Api.Data.Seeding
 
 		private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
 		{
-			string[] roles =
+			foreach (var role in ApplicationRoles.All)
 			{
-				"Admin",
-				"Manager",
-				"Staff"
-			};
-
-			foreach (string role in roles)
-			{
-				bool roleExists = await roleManager.RoleExistsAsync(role);
-
-				if (!roleExists)
+				if (!await roleManager.RoleExistsAsync(role))
 				{
-					await roleManager.CreateAsync(new IdentityRole(role));
+					var result = await roleManager.CreateAsync(new IdentityRole(role));
+
+					if (!result.Succeeded)
+					{
+						throw new InvalidOperationException(
+							$"Failed to seed role '{role}': {GetErrors(result)}");
+					}
 				}
 			}
 		}
 
-		private static async Task SeedUsersAsync(UserManager<ApplicationUser> userManager)
+		private static async Task SeedDefaultAdminAsync(
+			UserManager<ApplicationUser> userManager,
+			IConfiguration configuration)
 		{
-			// Placeholder for now.
-			// Once the exact ApplicationUser fields are confirmed,
-			// we will add lecturer-demo users here.
+			var adminEmail = configuration["SeedAdmin:Email"] ?? "admin@gmail.com";
+			var adminPassword = configuration["SeedAdmin:Password"] ?? "Admin1234!";
 
-			await Task.CompletedTask;
+			if (string.IsNullOrWhiteSpace(adminEmail))
+			{
+				throw new InvalidOperationException("Seed admin email is missing.");
+			}
+
+			if (string.IsNullOrWhiteSpace(adminPassword))
+			{
+				throw new InvalidOperationException(
+					"Seed admin password is missing. Configure SeedAdmin:Password before starting with an empty database.");
+			}
+
+			var adminUser = await userManager.FindByEmailAsync(adminEmail);
+
+			if (adminUser == null)
+			{
+				adminUser = new ApplicationUser
+				{
+					UserName = adminEmail,
+					Email = adminEmail,
+					EmailConfirmed = true,
+					FirstName = "Admin",
+					LastName = "Dude",
+					IsActive = true,
+					CreatedAt = DateTime.UtcNow,
+					UpdatedAt = DateTime.UtcNow
+				};
+
+				var createResult = await userManager.CreateAsync(adminUser, adminPassword);
+
+				if (!createResult.Succeeded)
+				{
+					throw new InvalidOperationException(
+						$"Failed to seed default admin user: {GetErrors(createResult)}");
+				}
+			}
+
+			if (!await userManager.IsInRoleAsync(adminUser, ApplicationRoles.Admin))
+			{
+				var roleResult = await userManager.AddToRoleAsync(adminUser, ApplicationRoles.Admin);
+
+				if (!roleResult.Succeeded)
+				{
+					throw new InvalidOperationException(
+						$"Failed to add default admin user to Admin role: {GetErrors(roleResult)}");
+				}
+			}
+		}
+
+		private static string GetErrors(IdentityResult result)
+		{
+			return string.Join("; ", result.Errors.Select(error => error.Description));
 		}
 	}
 }

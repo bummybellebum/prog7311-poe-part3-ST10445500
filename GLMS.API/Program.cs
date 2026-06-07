@@ -1,5 +1,6 @@
 using GLMS.Api.Data;
 using GLMS.Api.Data.Repositories;
+using GLMS.Api.Data.Seeding;
 using GLMS.Api.Filters;
 using GLMS.Api.Models;
 using GLMS.Api.Responses;
@@ -14,9 +15,6 @@ using Microsoft.OpenApi;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using GLMS.Api.Data;
-using GLMS.Api.Data.Seeding;
-using System.Threading.Tasks;
 
 namespace GLMS.Api
 {
@@ -211,57 +209,6 @@ namespace GLMS.Api
 			}
 
 			app.Run();
-		}
-
-		private static async Task SeedDefaultAdminAsync(WebApplication app)
-		{
-			using var scope = app.Services.CreateScope();
-			var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-			var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-
-			var adminEmail = app.Configuration["SeedAdmin:Email"] ?? "admin@gmail.com";
-			var adminPassword = app.Configuration["SeedAdmin:Password"] ?? "Admin1234!";
-
-			foreach (var role in ApplicationRoles.All)
-			{
-				if (!await roleManager.RoleExistsAsync(role))
-				{
-					await roleManager.CreateAsync(new IdentityRole(role));
-				}
-			}
-
-			var adminUser = await userManager.FindByEmailAsync(adminEmail);
-			if (adminUser == null)
-			{
-				if (string.IsNullOrWhiteSpace(adminPassword))
-				{
-					throw new InvalidOperationException("Seed admin password is missing. Configure SeedAdmin:Password before starting with an empty database.");
-				}
-
-				adminUser = new ApplicationUser
-				{
-					UserName = adminEmail,
-					Email = adminEmail,
-					EmailConfirmed = true,
-					FirstName = "Admin",
-					LastName = "Dude",
-					IsActive = true,
-					CreatedAt = DateTime.UtcNow,
-					UpdatedAt = DateTime.UtcNow
-				};
-
-				var createResult = await userManager.CreateAsync(adminUser, adminPassword);
-				if (!createResult.Succeeded)
-				{
-					var errors = string.Join("; ", createResult.Errors.Select(e => e.Description));
-					throw new InvalidOperationException($"Failed to seed default admin user: {errors}");
-				}
-			}
-
-			if (!await userManager.IsInRoleAsync(adminUser, ApplicationRoles.Admin))
-			{
-				await userManager.AddToRoleAsync(adminUser, ApplicationRoles.Admin);
-			}
 		}
 	}
 }
