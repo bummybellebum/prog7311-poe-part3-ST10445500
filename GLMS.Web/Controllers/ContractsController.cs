@@ -2,7 +2,6 @@ using GLMS.Web.Models;
 using GLMS.Web.Services;
 using GLMS.Web.ViewModels.Contracts;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -21,7 +20,7 @@ namespace GLMS.Web.Controllers
         private readonly ILookupService _lookupService;
         private readonly IContractDocumentService _contractDocumentService;
         private readonly IWebHostEnvironment _environment;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ICurrentUserService _currentUserService;
 
         public ContractsController(
             IContractService contractService,
@@ -29,14 +28,14 @@ namespace GLMS.Web.Controllers
             ILookupService lookupService,
             IContractDocumentService contractDocumentService,
             IWebHostEnvironment environment,
-            UserManager<ApplicationUser> userManager)
+            ICurrentUserService currentUserService)
         {
             _contractService = contractService;
             _clientService = clientService;
             _lookupService = lookupService;
             _contractDocumentService = contractDocumentService;
             _environment = environment;
-            _userManager = userManager;
+            _currentUserService = currentUserService;
         }
 
         //........................................................................................//
@@ -112,7 +111,7 @@ namespace GLMS.Web.Controllers
 
             try
             {
-                var userId = _userManager.GetUserId(User);
+                var userId = _currentUserService.UserId;
                 if (string.IsNullOrWhiteSpace(userId))
                 {
                     return Forbid();
@@ -375,7 +374,7 @@ namespace GLMS.Web.Controllers
                 await file.CopyToAsync(stream);
             }
 
-            var userId = _userManager.GetUserId(User);
+            var userId = _currentUserService.UserId;
             if (string.IsNullOrWhiteSpace(userId))
             {
                 throw new InvalidOperationException("Unable to identify the signed-in user for document upload.");

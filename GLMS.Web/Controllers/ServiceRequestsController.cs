@@ -2,7 +2,6 @@ using GLMS.Web.Models;
 using GLMS.Web.Services;
 using GLMS.Web.ViewModels.ServiceRequests;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -20,20 +19,20 @@ namespace GLMS.Web.Controllers
         private readonly IContractService _contractService;
         private readonly ILookupService _lookupService;
         private readonly ICurrencyExchangeService _currencyExchangeService;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ICurrentUserService _currentUserService;
 
         public ServiceRequestsController(
             IServiceRequestService serviceRequestService,
             IContractService contractService,
             ILookupService lookupService,
             ICurrencyExchangeService currencyExchangeService,
-            UserManager<ApplicationUser> userManager)
+            ICurrentUserService currentUserService)
         {
             _serviceRequestService = serviceRequestService;
             _contractService = contractService;
             _lookupService = lookupService;
             _currencyExchangeService = currencyExchangeService;
-            _userManager = userManager;
+            _currentUserService = currentUserService;
         }
 
         //............................................................................................//
@@ -126,7 +125,7 @@ namespace GLMS.Web.Controllers
 
             try
             {
-                var userId = _userManager.GetUserId(User);
+                var userId = _currentUserService.UserId;
                 if (string.IsNullOrWhiteSpace(userId))
                 {
                     return Forbid();

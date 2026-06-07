@@ -65,7 +65,8 @@ This project was developed as a **Part 2 MVC monolith prototype**, with a layere
 - Link to API used: https://frankfurter.dev/
 
 ### Authentication and Authorization
-- Uses **ASP.NET Core Identity**
+- Uses **ASP.NET Core Identity** for secure user storage, password hashing, cookies, and roles
+- Uses custom GLMS MVC account pages instead of the scaffolded Identity UI
 - Supports role-based access
 - Includes a seeded/demo admin account for marking and demonstration
 

@@ -38,8 +38,20 @@ namespace GLMS.Web
                 options.User.RequireUniqueEmail = true;
             })
             .AddEntityFrameworkStores<ApplicationDbContext>()
-            .AddDefaultUI()
             .AddDefaultTokenProviders();
+
+            //use our own MVC account pages but keep Identity for secure cookies and password handling
+            builder.Services.ConfigureApplicationCookie(options =>
+            {
+                options.LoginPath = "/Account/Login";
+                options.LogoutPath = "/Account/Logout";
+                options.AccessDeniedPath = "/Account/AccessDenied";
+            });
+
+            //register the custom account services
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddScoped<IAccountService, AccountService>();
+            builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
             //register all the data repositories so we can use them everywhere
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -71,7 +83,6 @@ namespace GLMS.Web
 
             //add services to the container.
             builder.Services.AddControllersWithViews();
-            builder.Services.AddRazorPages();
 
             var app = builder.Build();
 
@@ -95,7 +106,6 @@ namespace GLMS.Web
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}")
                 .WithStaticAssets();
-            app.MapRazorPages();
 
             // Apply any pending EF Core migrations automatically on startup
             try
@@ -126,13 +136,15 @@ namespace GLMS.Web
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-            const string adminRole = "Admin";
             const string adminEmail = "admin@gmail.com";
             const string adminPassword = "Admin1234!";
 
-            if (!await roleManager.RoleExistsAsync(adminRole))
+            foreach (var role in ApplicationRoles.All)
             {
-                await roleManager.CreateAsync(new IdentityRole(adminRole));
+                if (!await roleManager.RoleExistsAsync(role))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(role));
+                }
             }
 
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
@@ -157,9 +169,9 @@ namespace GLMS.Web
                 }
             }
 
-            if (!await userManager.IsInRoleAsync(adminUser, adminRole))
+            if (!await userManager.IsInRoleAsync(adminUser, ApplicationRoles.Admin))
             {
-                await userManager.AddToRoleAsync(adminUser, adminRole);
+                await userManager.AddToRoleAsync(adminUser, ApplicationRoles.Admin);
             }
         }
 
