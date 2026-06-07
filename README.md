@@ -98,6 +98,35 @@ This project was developed as a **Part 2 MVC monolith prototype**, with a layere
 
 ---
 
+## Running With Docker Compose
+
+Docker Compose is kept in the `GLMS-Stack/` folder:
+
+```text
+GLMS-Stack/
+|-- GLMS-Stack.dcproj
+`-- docker-compose.yml
+```
+
+In Visual Studio:
+
+1. Make sure Docker Desktop is running.
+2. Open `GLMS-POE.slnx`.
+3. In Solution Explorer, right-click `GLMS-Stack` and choose **Set as Startup Project**.
+4. Press **Run** / **Docker Compose**.
+
+The Compose stack starts:
+
+- `glms-sql-server-db`: SQL Server 2022 on host port `1433`
+- `glms-backend-api`: API container on host port `8080`
+- `glms-frontend-web`: MVC web app on host port `8082`
+
+The web app uses the Docker SQL Server connection string from `GLMS-Stack/docker-compose.yml`. On startup, EF Core runs the migrations against `GLMSDb`, and the default admin account is seeded.
+
+The root `.dockerignore` intentionally stays at the repository root because the Docker build context is the whole repo. Docker only applies `.dockerignore` from the build context root.
+
+---
+
 ## Lecturer / Demo Login Details
 
 > **For lecturer/demo access only**

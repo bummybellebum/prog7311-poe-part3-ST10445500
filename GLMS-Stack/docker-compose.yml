@@ -18,7 +18,7 @@ services:
 
   glms-backend-api:
     build:
-      context: .
+      context: ..
       dockerfile: GLMS.Api/Dockerfile
     container_name: glms-backend-api
     environment:
@@ -32,7 +32,7 @@ services:
 
   glms-frontend-web:
     build:
-      context: .
+      context: ..
       dockerfile: GLMS.Web/Dockerfile
     container_name: glms-frontend-web
     environment:

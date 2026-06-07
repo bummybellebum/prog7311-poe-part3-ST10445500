@@ -9,6 +9,6 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="docker-compose.yml" />
-    <None Include=".dockerignore" />
+    <None Include="..\.dockerignore" />
   </ItemGroup>
 </Project>
