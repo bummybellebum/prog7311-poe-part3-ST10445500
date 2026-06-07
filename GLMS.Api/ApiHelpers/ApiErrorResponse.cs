@@ -1,4 +1,4 @@
-namespace GLMS.Api.Responses
+namespace GLMS.Api.ApiHelpers
 {
     public class ApiErrorResponse
     {
