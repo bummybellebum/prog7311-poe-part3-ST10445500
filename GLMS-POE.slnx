@@ -1,8 +1,9 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path=".env" />
     <File Path="README.md" />
   </Folder>
-  <Project Path="GLMS-Stack/GLMS-Stack.dcproj" Id="a28f34fb-8041-4e76-9c55-4b68d8f5e25f">
+  <Project Path="GLMS-Stack.dcproj">
     <Build />
   </Project>
   <Project Path="GLMS.Api/GLMS.Api.csproj" Id="534a910d-cb44-4289-abf7-6fe70c648524" />

@@ -1,8 +1,9 @@
 using System.Security.Claims;
-using GLMS.Web.Models;
+using System.Text;
+using System.Text.Json;
 using GLMS.Web.ViewModels.Account;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 //ST10445500 - PROG7311 - GLMS POE
 //AccountService
@@ -11,78 +12,81 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GLMS.Web.Services
 {
-    public class AccountService : IAccountService
+    public class AccountService : ApiClientService, IAccountService
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public AccountService(
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager)
+        public AccountService(HttpClient httpClient, IHttpContextAccessor httpContextAccessor)
+            : base(httpClient, httpContextAccessor)
         {
-            _userManager = userManager;
-            _signInManager = signInManager;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         //..............................................................................//
 
         public async Task<LoginResult> LoginAsync(LoginViewModel vm)
         {
-            var email = vm.Email.Trim();
-            var user = await _userManager.FindByEmailAsync(email);
+            using var content = new StringContent(JsonSerializer.Serialize(vm, JsonOptions), Encoding.UTF8, "application/json");
+            using var response = await HttpClient.PostAsync("api/auth/login", content);
 
-            if (user == null)
+            if (!response.IsSuccessStatusCode)
             {
-                return LoginResult.FailedLogin("Invalid login attempt.");
+                return LoginResult.FailedLogin(await ReadLoginErrorAsync(response));
             }
 
-            if (!user.IsActive)
+            var auth = await ReadAsync<AuthResponseDto>(response);
+            if (auth == null || string.IsNullOrWhiteSpace(auth.Token))
             {
-                return LoginResult.FailedLogin("This account is inactive. Please contact an administrator.");
+                return LoginResult.FailedLogin("The API did not return a valid login token.");
             }
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user, vm.Password, lockoutOnFailure: true);
-            if (result.Succeeded)
+            var claims = new List<Claim>
             {
-                await _signInManager.SignInAsync(user, vm.RememberMe);
-                return LoginResult.SuccessLogin();
+                new(ClaimTypes.NameIdentifier, auth.UserId),
+                new(ClaimTypes.Name, auth.Email),
+                new(ClaimTypes.Email, auth.Email),
+                new("ApiToken", auth.Token)
+            };
+
+            foreach (var role in auth.Roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            if (result.IsLockedOut)
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+            var properties = new AuthenticationProperties
             {
-                return LoginResult.LockedOut();
-            }
+                IsPersistent = vm.RememberMe,
+                ExpiresUtc = auth.ExpiresAt
+            };
 
-            if (result.RequiresTwoFactor)
-            {
-                return LoginResult.TwoFactorRequired();
-            }
-
-            return LoginResult.FailedLogin("Invalid login attempt.");
+            await _httpContextAccessor.HttpContext!.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, properties);
+            return LoginResult.SuccessLogin();
         }
 
         //..............................................................................//
 
         public Task LogoutAsync()
         {
-            return _signInManager.SignOutAsync();
+            return _httpContextAccessor.HttpContext!.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         }
 
         //..............................................................................//
 
         public async Task<ProfileViewModel?> GetProfileAsync(ClaimsPrincipal user)
         {
-            var appUser = await _userManager.GetUserAsync(user);
-            if (appUser == null)
+            var auth = await GetAsync<AuthResponseDto>("api/auth/me");
+            if (auth == null)
             {
                 return null;
             }
 
             return new ProfileViewModel
             {
-                FirstName = appUser.FirstName,
-                LastName = appUser.LastName,
-                Email = appUser.Email ?? string.Empty
+                FirstName = auth.FirstName,
+                LastName = auth.LastName,
+                Email = auth.Email
             };
         }
 
@@ -90,241 +94,149 @@ namespace GLMS.Web.Services
 
         public async Task<AccountResult> UpdateProfileAsync(ClaimsPrincipal user, ProfileViewModel vm)
         {
-            var appUser = await _userManager.GetUserAsync(user);
-            if (appUser == null)
+            try
             {
-                return AccountResult.Failed("Unable to find the signed-in user.");
+                await PutAsync("api/auth/profile", vm);
+                return AccountResult.Success();
             }
-
-            appUser.FirstName = vm.FirstName;
-            appUser.LastName = vm.LastName;
-
-            var result = await _userManager.UpdateAsync(appUser);
-            if (!result.Succeeded)
+            catch (InvalidOperationException ex)
             {
-                return ToAccountResult(result);
+                return AccountResult.Failed(ex.Message);
             }
-
-            await _signInManager.RefreshSignInAsync(appUser);
-            return AccountResult.Success();
         }
 
         //..............................................................................//
 
         public async Task<AccountResult> ChangePasswordAsync(ClaimsPrincipal user, ChangePasswordViewModel vm)
         {
-            var appUser = await _userManager.GetUserAsync(user);
-            if (appUser == null)
+            try
             {
-                return AccountResult.Failed("Unable to find the signed-in user.");
+                await PostNoResultAsync("api/auth/change-password", vm);
+                return AccountResult.Success();
             }
-
-            var result = await _userManager.ChangePasswordAsync(appUser, vm.CurrentPassword, vm.NewPassword);
-            if (!result.Succeeded)
+            catch (InvalidOperationException ex)
             {
-                return ToAccountResult(result);
+                return AccountResult.Failed(ex.Message);
             }
-
-            await _signInManager.RefreshSignInAsync(appUser);
-            return AccountResult.Success();
         }
 
         //..............................................................................//
 
         public async Task<IReadOnlyList<AdminUserListItemViewModel>> GetUsersAsync()
         {
-            var users = await _userManager.Users
-                .OrderBy(u => u.Email)
-                .ToListAsync();
-
-            var result = new List<AdminUserListItemViewModel>();
-            foreach (var user in users)
-            {
-                var roles = await _userManager.GetRolesAsync(user);
-                result.Add(new AdminUserListItemViewModel
-                {
-                    UserId = user.Id,
-                    Email = user.Email ?? string.Empty,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    Role = roles.FirstOrDefault() ?? string.Empty,
-                    IsActive = user.IsActive,
-                    CreatedAt = user.CreatedAt
-                });
-            }
-
-            return result;
+            return await GetAsync<List<AdminUserListItemViewModel>>("api/admin/users") ?? new List<AdminUserListItemViewModel>();
         }
 
         //..............................................................................//
 
-        public async Task<AdminUserEditViewModel?> GetUserForEditAsync(string userId)
+        public Task<AdminUserEditViewModel?> GetUserForEditAsync(string userId)
         {
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null)
-            {
-                return null;
-            }
-
-            var roles = await _userManager.GetRolesAsync(user);
-            return new AdminUserEditViewModel
-            {
-                UserId = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email ?? string.Empty,
-                Role = roles.FirstOrDefault() ?? ApplicationRoles.LogisticsManager,
-                IsActive = user.IsActive
-            };
+            return GetAsync<AdminUserEditViewModel>($"api/admin/users/{Uri.EscapeDataString(userId)}");
         }
 
         //..............................................................................//
 
         public async Task<AccountResult> CreateUserAsync(AdminUserCreateViewModel vm)
         {
-            if (!IsSupportedRole(vm.Role))
+            try
             {
-                return AccountResult.Failed("The selected role is not supported.");
+                await PostNoResultAsync("api/admin/users", vm);
+                return AccountResult.Success();
             }
-
-            var email = vm.Email.Trim();
-            var user = new ApplicationUser
+            catch (InvalidOperationException ex)
             {
-                UserName = email,
-                Email = email,
-                EmailConfirmed = true,
-                FirstName = vm.FirstName,
-                LastName = vm.LastName,
-                IsActive = vm.IsActive,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            var createResult = await _userManager.CreateAsync(user, vm.TemporaryPassword);
-            if (!createResult.Succeeded)
-            {
-                return ToAccountResult(createResult);
+                return AccountResult.Failed(ex.Message);
             }
-
-            var roleResult = await _userManager.AddToRoleAsync(user, vm.Role);
-            if (!roleResult.Succeeded)
-            {
-                return ToAccountResult(roleResult);
-            }
-
-            return AccountResult.Success();
         }
 
         //..............................................................................//
 
         public async Task<AccountResult> UpdateUserAsync(AdminUserEditViewModel vm)
         {
-            if (!IsSupportedRole(vm.Role))
+            try
             {
-                return AccountResult.Failed("The selected role is not supported.");
+                await PutAsync($"api/admin/users/{Uri.EscapeDataString(vm.UserId)}", vm);
+                return AccountResult.Success();
             }
-
-            var user = await _userManager.FindByIdAsync(vm.UserId);
-            if (user == null)
+            catch (InvalidOperationException ex)
             {
-                return AccountResult.Failed("User not found.");
+                return AccountResult.Failed(ex.Message);
             }
-
-            if (!vm.IsActive && await IsLastActiveAdminAsync(user))
-            {
-                return AccountResult.Failed("At least one active admin account is required.");
-            }
-
-            if (vm.Role != ApplicationRoles.Admin && await IsLastActiveAdminAsync(user))
-            {
-                return AccountResult.Failed("At least one active admin account is required.");
-            }
-
-            user.FirstName = vm.FirstName;
-            user.LastName = vm.LastName;
-            user.Email = vm.Email.Trim();
-            user.UserName = user.Email;
-            user.IsActive = vm.IsActive;
-
-            var updateResult = await _userManager.UpdateAsync(user);
-            if (!updateResult.Succeeded)
-            {
-                return ToAccountResult(updateResult);
-            }
-
-            var existingRoles = await _userManager.GetRolesAsync(user);
-            var removeResult = await _userManager.RemoveFromRolesAsync(user, existingRoles);
-            if (!removeResult.Succeeded)
-            {
-                return ToAccountResult(removeResult);
-            }
-
-            var addResult = await _userManager.AddToRoleAsync(user, vm.Role);
-            return addResult.Succeeded ? AccountResult.Success() : ToAccountResult(addResult);
         }
 
         //..............................................................................//
 
         public async Task<AccountResult> SetUserActiveAsync(string userId, bool isActive)
         {
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null)
+            try
             {
-                return AccountResult.Failed("User not found.");
+                await PatchAsync($"api/admin/users/{Uri.EscapeDataString(userId)}/active", new { isActive });
+                return AccountResult.Success();
             }
-
-            if (!isActive && await IsLastActiveAdminAsync(user))
+            catch (InvalidOperationException ex)
             {
-                return AccountResult.Failed("At least one active admin account is required.");
+                return AccountResult.Failed(ex.Message);
             }
-
-            user.IsActive = isActive;
-            var result = await _userManager.UpdateAsync(user);
-            return result.Succeeded ? AccountResult.Success() : ToAccountResult(result);
         }
 
         //..............................................................................//
 
         public async Task<AccountResult> ResetPasswordAsync(AdminResetPasswordViewModel vm)
         {
-            var user = await _userManager.FindByIdAsync(vm.UserId);
-            if (user == null)
+            try
             {
-                return AccountResult.Failed("User not found.");
+                await PostNoResultAsync($"api/admin/users/{Uri.EscapeDataString(vm.UserId)}/reset-password", vm);
+                return AccountResult.Success();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return AccountResult.Failed(ex.Message);
+            }
+        }
+
+        //..............................................................................//
+
+        private static async Task<string> ReadLoginErrorAsync(HttpResponseMessage response)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return "Invalid login attempt.";
             }
 
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var result = await _userManager.ResetPasswordAsync(user, token, vm.TemporaryPassword);
-            return result.Succeeded ? AccountResult.Success() : ToAccountResult(result);
-        }
-
-        //..............................................................................//
-
-        private static bool IsSupportedRole(string role)
-        {
-            return ApplicationRoles.All.Contains(role);
-        }
-
-        //..............................................................................//
-
-        private async Task<bool> IsLastActiveAdminAsync(ApplicationUser user)
-        {
-            if (!await _userManager.IsInRoleAsync(user, ApplicationRoles.Admin))
+            try
             {
-                return false;
+                var error = JsonSerializer.Deserialize<ApiErrorResponse>(content, JsonOptions);
+                if (error?.Errors?.Count > 0)
+                {
+                    return string.Join(" ", error.Errors);
+                }
+            }
+            catch
+            {
+                return "Invalid login attempt.";
             }
 
-            var activeAdmins = await _userManager.GetUsersInRoleAsync(ApplicationRoles.Admin);
-            return activeAdmins.Count(u => u.IsActive) <= 1;
+            return "Invalid login attempt.";
         }
 
         //..............................................................................//
 
-        private static AccountResult ToAccountResult(IdentityResult result)
+        private class AuthResponseDto
         {
-            return AccountResult.Failed(result.Errors.Select(e => e.Description));
+            public string Token { get; set; } = string.Empty;
+            public DateTime ExpiresAt { get; set; }
+            public string UserId { get; set; } = string.Empty;
+            public string Email { get; set; } = string.Empty;
+            public string? FirstName { get; set; }
+            public string? LastName { get; set; }
+            public List<string> Roles { get; set; } = new();
         }
 
-        //..............................................................................//
+        private class ApiErrorResponse
+        {
+            public List<string> Errors { get; set; } = new();
+        }
     }
 }
 

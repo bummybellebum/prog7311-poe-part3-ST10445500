@@ -1,6 +1,6 @@
-using GLMS.Web.Data.Repositories;
-using GLMS.Web.Models;
-using GLMS.Web.Services;
+using GLMS.Api.Data.Repositories;
+using GLMS.Api.Models;
+using GLMS.Api.Services;
 using Moq;
 
 namespace GLMS.Tests.Unit.Services
@@ -50,3 +50,4 @@ namespace GLMS.Tests.Unit.Services
         }
     }
 }
+

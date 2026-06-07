@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GLMS.Web\GLMS.Web.csproj" />
+    <ProjectReference Include="..\GLMS.Api\GLMS.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

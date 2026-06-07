@@ -19,7 +19,6 @@ namespace GLMS.Web.Controllers
         private readonly IClientService _clientService;
         private readonly ILookupService _lookupService;
         private readonly IContractDocumentService _contractDocumentService;
-        private readonly IWebHostEnvironment _environment;
         private readonly ICurrentUserService _currentUserService;
 
         public ContractsController(
@@ -27,14 +26,12 @@ namespace GLMS.Web.Controllers
             IClientService clientService,
             ILookupService lookupService,
             IContractDocumentService contractDocumentService,
-            IWebHostEnvironment environment,
             ICurrentUserService currentUserService)
         {
             _contractService = contractService;
             _clientService = clientService;
             _lookupService = lookupService;
             _contractDocumentService = contractDocumentService;
-            _environment = environment;
             _currentUserService = currentUserService;
         }
 
@@ -133,7 +130,7 @@ namespace GLMS.Web.Controllers
 
                 if (vm.SignedAgreementFile != null && vm.SignedAgreementFile.Length > 0)
                 {
-                    await SaveSignedAgreementAsync(contract.ContractId, vm.SignedAgreementFile);
+                    await _contractDocumentService.UploadSignedAgreementAsync(contract.ContractId, vm.SignedAgreementFile);
                     TempData["SuccessMessage"] = "Contract created successfully and signed agreement uploaded.";
                 }
                 else
@@ -280,7 +277,7 @@ namespace GLMS.Web.Controllers
 
             try
             {
-                await SaveSignedAgreementAsync(vm.ContractId, vm.File);
+                await _contractDocumentService.UploadSignedAgreementAsync(vm.ContractId, vm.File);
                 TempData["SuccessMessage"] = "Signed agreement uploaded successfully.";
             }
             catch (Exception ex)
@@ -302,15 +299,14 @@ namespace GLMS.Web.Controllers
                 return NotFound();
             }
 
-            var fullPath = Path.Combine(_environment.WebRootPath, document.FilePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-            if (!System.IO.File.Exists(fullPath))
+            var file = await _contractDocumentService.DownloadAgreementAsync(id);
+            if (file == null)
             {
                 TempData["ErrorMessage"] = "The agreement file could not be found on the server.";
                 return RedirectToAction(nameof(Details), new { id = document.ContractId });
             }
 
-            var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
-            return File(bytes, document.ContentType ?? "application/pdf", document.OriginalFileName);
+            return File(file.Bytes, file.ContentType, file.FileName);
         }
 
         //........................................................................................//
@@ -361,49 +357,6 @@ namespace GLMS.Web.Controllers
             return string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase) && isAllowedContentType;
         }
 
-        private async Task SaveSignedAgreementAsync(int contractId, IFormFile file)
-        {
-            var uploadFolder = Path.Combine(_environment.WebRootPath, "uploads", "signed-agreements");
-            Directory.CreateDirectory(uploadFolder);
-
-            var storedFileName = $"contract-{contractId}-{Guid.NewGuid():N}.pdf";
-            var fullPath = Path.Combine(uploadFolder, storedFileName);
-
-            await using (var stream = System.IO.File.Create(fullPath))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            var userId = _currentUserService.UserId;
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                throw new InvalidOperationException("Unable to identify the signed-in user for document upload.");
-            }
-
-            var existingDocuments = await _contractDocumentService.GetByContractIdAsync(contractId);
-            foreach (var existing in existingDocuments.Where(d => d.IsCurrent))
-            {
-                existing.IsCurrent = false;
-                await _contractDocumentService.UpdateAsync(existing);
-            }
-
-            var document = new ContractDocument
-            {
-                ContractId = contractId,
-                DocumentType = "Signed Agreement",
-                OriginalFileName = Path.GetFileName(file.FileName),
-                StoredFileName = storedFileName,
-                FilePath = Path.Combine("uploads", "signed-agreements", storedFileName).Replace("\\", "/"),
-                ContentType = file.ContentType,
-                FileSizeBytes = file.Length,
-                UploadedByUserId = userId,
-                IsCurrent = true
-            };
-
-            await _contractDocumentService.CreateAsync(document);
-        }
-
-        //........................................................................................//
     }
 }
 

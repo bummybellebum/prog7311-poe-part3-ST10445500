@@ -1,6 +1,6 @@
-using GLMS.Web.Data;
-using GLMS.Web.Data.Repositories;
-using GLMS.Web.Models;
+using GLMS.Api.Data;
+using GLMS.Api.Data.Repositories;
+using GLMS.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace GLMS.Tests.Unit.Repositories
@@ -154,3 +154,4 @@ namespace GLMS.Tests.Unit.Repositories
         }
     }
 }
+

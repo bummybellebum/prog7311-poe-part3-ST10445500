@@ -1,49 +1,40 @@
-using GLMS.Web.Data.Repositories;
 using GLMS.Web.Models;
+
+//ST10445500 - PROG7311 - GLMS POE
+//LookupService
+
+//.....................................o0oSTART OF FILEo0o........................................//
 
 namespace GLMS.Web.Services
 {
-    //manages lookup data for statuses and reference information
+    //manages lookup data by calling the GLMS API
     public interface ILookupService
     {
-        //retrieves all available contract statuses
         Task<List<ContractStatus>> GetContractStatusesAsync();
-
-        //retrieves all available service request statuses
         Task<List<ServiceRequestStatus>> GetServiceRequestStatusesAsync();
     }
 
     //..............................................................................//
 
-    //implements business logic for managing lookup data
-    //provides reference information for statuses and other lookups
-    public class LookupService : ILookupService
+    public class LookupService : ApiClientService, ILookupService
     {
-        private readonly IRepository<ContractStatus> _contractStatusRepository;
-        private readonly IRepository<ServiceRequestStatus> _serviceRequestStatusRepository;
-
-        public LookupService(
-            IRepository<ContractStatus> contractStatusRepository,
-            IRepository<ServiceRequestStatus> serviceRequestStatusRepository)
+        public LookupService(HttpClient httpClient, IHttpContextAccessor httpContextAccessor)
+            : base(httpClient, httpContextAccessor)
         {
-            _contractStatusRepository = contractStatusRepository;
-            _serviceRequestStatusRepository = serviceRequestStatusRepository;
         }
 
         //..............................................................................//
 
-        //retrieves all available contract statuses
         public async Task<List<ContractStatus>> GetContractStatusesAsync()
         {
-            return await _contractStatusRepository.GetAllAsync();
+            return await GetAsync<List<ContractStatus>>("api/lookups/contract-statuses") ?? new List<ContractStatus>();
         }
 
         //..............................................................................//
 
-        //retrieves all available service request statuses
         public async Task<List<ServiceRequestStatus>> GetServiceRequestStatusesAsync()
         {
-            return await _serviceRequestStatusRepository.GetAllAsync();
+            return await GetAsync<List<ServiceRequestStatus>>("api/lookups/service-request-statuses") ?? new List<ServiceRequestStatus>();
         }
 
         //..............................................................................//

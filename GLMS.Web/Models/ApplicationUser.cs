@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Identity;
-
 //ST10445500 - PROG7311 - GLMS POE
 //ApplicationUser
 
@@ -7,8 +5,11 @@ using Microsoft.AspNetCore.Identity;
 
 namespace GLMS.Web.Models
 {
-    public class ApplicationUser : IdentityUser
+    public class ApplicationUser
     {
+        public string Id { get; set; } = string.Empty;
+        public string? UserName { get; set; }
+        public string? Email { get; set; }
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
         public bool IsActive { get; set; } = true;

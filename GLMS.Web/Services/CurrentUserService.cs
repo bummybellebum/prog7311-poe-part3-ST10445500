@@ -1,6 +1,4 @@
 using System.Security.Claims;
-using GLMS.Web.Models;
-using Microsoft.AspNetCore.Identity;
 
 //ST10445500 - PROG7311 - GLMS POE
 //CurrentUserService
@@ -12,21 +10,17 @@ namespace GLMS.Web.Services
     public class CurrentUserService : ICurrentUserService
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly UserManager<ApplicationUser> _userManager;
 
-        public CurrentUserService(
-            IHttpContextAccessor httpContextAccessor,
-            UserManager<ApplicationUser> userManager)
+        public CurrentUserService(IHttpContextAccessor httpContextAccessor)
         {
             _httpContextAccessor = httpContextAccessor;
-            _userManager = userManager;
         }
 
         //..............................................................................//
 
         public ClaimsPrincipal? User => _httpContextAccessor.HttpContext?.User;
 
-        public string? UserId => User == null ? null : _userManager.GetUserId(User);
+        public string? UserId => User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
         public string? UserName => User?.Identity?.Name;
 

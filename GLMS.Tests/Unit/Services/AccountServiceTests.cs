@@ -1,8 +1,9 @@
 using System.Security.Claims;
-using GLMS.Web.Data;
-using GLMS.Web.Models;
-using GLMS.Web.Services;
-using GLMS.Web.ViewModels.Account;
+using GLMS.Api.Data;
+using GLMS.Api.Models;
+using GLMS.Api.Services;
+using GLMS.Api.ViewModels.Account;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -199,7 +200,10 @@ namespace GLMS.Tests.Unit.Services
         {
             var services = new ServiceCollection();
             services.AddLogging();
-            services.AddDataProtection();
+            var keyDirectory = new DirectoryInfo(Path.Combine(Path.GetTempPath(), "glms-test-data-protection-keys"));
+            keyDirectory.Create();
+            services.AddDataProtection()
+                .PersistKeysToFileSystem(keyDirectory);
             services.AddHttpContextAccessor();
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
@@ -276,3 +280,4 @@ namespace GLMS.Tests.Unit.Services
 }
 
 //.....................................o0oEND OF FILEo0o..........................................//
+
