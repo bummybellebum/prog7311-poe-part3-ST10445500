@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using GLMS.Api.Data.Repositories;
 using GLMS.Api.DTOs.Auth;
 using GLMS.Api.DTOs.Mappings;
@@ -8,15 +9,21 @@ using Microsoft.AspNetCore.Identity;
 
 namespace GLMS.Api.Services
 {
-    //manages admin user account actions
+    //manages user accounts and current signed-in account details
     public interface IAccountService
     {
-        Task<IReadOnlyList<AdminUserListDto>> GetUsersAsync();
-        Task<AdminUserDetailDto?> GetUserForEditAsync(string userId);
-        Task<AccountResult<AdminUserDetailDto>> CreateUserAsync(CreateAdminUserDto dto);
-        Task<AccountResult> UpdateUserAsync(UpdateAdminUserDto dto);
+        Task<IReadOnlyList<UserListDto>> GetUsersAsync();
+        Task<UserDetailDto?> GetUserAsync(string userId);
+        Task<AccountResult<UserDetailDto>> CreateUserAsync(CreateUserDto dto);
+        Task<AccountResult> UpdateUserAsync(string userId, UpdateUserDto dto);
         Task<AccountResult> SetUserActiveAsync(string userId, bool isActive);
-        Task<AccountResult> ResetPasswordAsync(ResetAdminPasswordDto dto);
+        Task<AccountResult> ResetUserPasswordAsync(ResetUserPasswordDto dto);
+        Task<AccountResult<AuthResponseDto>> GetCurrentAccountAsync();
+        Task<AccountResult<AuthResponseDto>> UpdateCurrentAccountAsync(UpdateAccountProfileDto dto);
+        Task<AccountResult<object>> ChangeCurrentPasswordAsync(ChangePasswordRequestDto dto);
+        string GetCurrentUserId();
+        Task<ApplicationUser?> FindUserByEmailAsync(string email);
+        Task<IList<string>> GetUserRolesAsync(ApplicationUser user);
     }
 
     //..............................................................................//
@@ -24,24 +31,28 @@ namespace GLMS.Api.Services
     //simple result returned by account service methods
     public class AccountResult
     {
-        protected AccountResult(bool succeeded, bool isNotFound, IReadOnlyList<string> errors)
+        protected AccountResult(bool succeeded, bool isNotFound, bool isUnauthorized, IReadOnlyList<string> errors)
         {
             Succeeded = succeeded;
             IsNotFound = isNotFound;
+            IsUnauthorized = isUnauthorized;
             Errors = errors;
         }
 
         public bool Succeeded { get; }
         public bool IsNotFound { get; }
+        public bool IsUnauthorized { get; }
         public IReadOnlyList<string> Errors { get; }
 
-        public static AccountResult Success() => new(true, false, []);
+        public static AccountResult Success() => new(true, false, false, []);
 
-        public static AccountResult Failed(params string[] errors) => new(false, false, errors);
+        public static AccountResult Failed(params string[] errors) => new(false, false, false, errors);
 
-        public static AccountResult Failed(IEnumerable<string> errors) => new(false, false, errors.ToList());
+        public static AccountResult Failed(IEnumerable<string> errors) => new(false, false, false, errors.ToList());
 
-        public static AccountResult NotFound(params string[] errors) => new(false, true, errors);
+        public static AccountResult NotFound(params string[] errors) => new(false, true, false, errors);
+
+        public static AccountResult Unauthorized(params string[] errors) => new(false, false, true, errors);
     }
 
     //..............................................................................//
@@ -49,21 +60,23 @@ namespace GLMS.Api.Services
     //simple result returned by account service methods that include a value
     public class AccountResult<T> : AccountResult
     {
-        private AccountResult(bool succeeded, bool isNotFound, T? value, IReadOnlyList<string> errors)
-            : base(succeeded, isNotFound, errors)
+        private AccountResult(bool succeeded, bool isNotFound, bool isUnauthorized, T? value, IReadOnlyList<string> errors)
+            : base(succeeded, isNotFound, isUnauthorized, errors)
         {
             Value = value;
         }
 
         public T? Value { get; }
 
-        public static AccountResult<T> Success(T value) => new(true, false, value, []);
+        public static AccountResult<T> Success(T value) => new(true, false, false, value, []);
 
-        public static new AccountResult<T> Failed(params string[] errors) => new(false, false, default, errors);
+        public static new AccountResult<T> Failed(params string[] errors) => new(false, false, false, default, errors);
 
-        public static new AccountResult<T> Failed(IEnumerable<string> errors) => new(false, false, default, errors.ToList());
+        public static new AccountResult<T> Failed(IEnumerable<string> errors) => new(false, false, false, default, errors.ToList());
 
-        public static new AccountResult<T> NotFound(params string[] errors) => new(false, true, default, errors);
+        public static new AccountResult<T> NotFound(params string[] errors) => new(false, true, false, default, errors);
+
+        public static new AccountResult<T> Unauthorized(params string[] errors) => new(false, false, true, default, errors);
     }
 
     //..............................................................................//
@@ -71,23 +84,27 @@ namespace GLMS.Api.Services
     public class AccountService : IAccountService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public AccountService(IUserRepository userRepository)
+        public AccountService(
+            IUserRepository userRepository,
+            IHttpContextAccessor httpContextAccessor)
         {
             _userRepository = userRepository;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         //..............................................................................//
 
-        public async Task<IReadOnlyList<AdminUserListDto>> GetUsersAsync()
+        public async Task<IReadOnlyList<UserListDto>> GetUsersAsync()
         {
             var users = await _userRepository.GetUsersAsync();
 
-            var result = new List<AdminUserListDto>();
+            var result = new List<UserListDto>();
             foreach (var user in users)
             {
                 var roles = await _userRepository.GetRolesAsync(user);
-                result.Add(user.ToAdminUserListDto(roles.FirstOrDefault() ?? string.Empty));
+                result.Add(user.ToUserListDto(roles.FirstOrDefault() ?? string.Empty));
             }
 
             return result;
@@ -95,7 +112,7 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        public async Task<AdminUserDetailDto?> GetUserForEditAsync(string userId)
+        public async Task<UserDetailDto?> GetUserAsync(string userId)
         {
             var user = await _userRepository.FindByIdAsync(userId);
             if (user == null)
@@ -104,22 +121,22 @@ namespace GLMS.Api.Services
             }
 
             var roles = await _userRepository.GetRolesAsync(user);
-            return user.ToAdminUserDetailDto(roles.FirstOrDefault() ?? ApplicationRoles.LogisticsManager);
+            return user.ToUserDetailDto(roles.FirstOrDefault() ?? ApplicationRoles.LogisticsManager);
         }
 
         //..............................................................................//
 
-        public async Task<AccountResult<AdminUserDetailDto>> CreateUserAsync(CreateAdminUserDto dto)
+        public async Task<AccountResult<UserDetailDto>> CreateUserAsync(CreateUserDto dto)
         {
             if (!IsSupportedRole(dto.Role))
             {
-                return AccountResult<AdminUserDetailDto>.Failed("The selected role is not supported.");
+                return AccountResult<UserDetailDto>.Failed("The selected role is not supported.");
             }
 
             var email = dto.Email.Trim();
             if (!await _userRepository.IsEmailUniqueAsync(email))
             {
-                return AccountResult<AdminUserDetailDto>.Failed("A user with this email address already exists.");
+                return AccountResult<UserDetailDto>.Failed("A user with this email address already exists.");
             }
 
             var user = new ApplicationUser
@@ -137,16 +154,21 @@ namespace GLMS.Api.Services
             var result = await _userRepository.CreateUserAsync(user, dto.TemporaryPassword, dto.Role);
             if (!result.Succeeded)
             {
-                return ToAccountResult<AdminUserDetailDto>(result);
+                return ToAccountResult<UserDetailDto>(result);
             }
 
-            return AccountResult<AdminUserDetailDto>.Success(user.ToAdminUserDetailDto(dto.Role));
+            return AccountResult<UserDetailDto>.Success(user.ToUserDetailDto(dto.Role));
         }
 
         //..............................................................................//
 
-        public async Task<AccountResult> UpdateUserAsync(UpdateAdminUserDto dto)
+        public async Task<AccountResult> UpdateUserAsync(string userId, UpdateUserDto dto)
         {
+            if (userId != dto.UserId)
+            {
+                throw new ArgumentException("User ID does not match.");
+            }
+
             if (!IsSupportedRole(dto.Role))
             {
                 return AccountResult.Failed("The selected role is not supported.");
@@ -215,7 +237,7 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        public async Task<AccountResult> ResetPasswordAsync(ResetAdminPasswordDto dto)
+        public async Task<AccountResult> ResetUserPasswordAsync(ResetUserPasswordDto dto)
         {
             var user = await _userRepository.FindByIdAsync(dto.UserId);
             if (user == null)
@@ -225,6 +247,101 @@ namespace GLMS.Api.Services
 
             var result = await _userRepository.ResetPasswordAsync(user, dto.TemporaryPassword);
             return result.Succeeded ? AccountResult.Success() : ToAccountResult(result);
+        }
+
+        //..............................................................................//
+
+        public async Task<AccountResult<AuthResponseDto>> GetCurrentAccountAsync()
+        {
+            var user = await GetCurrentUserAsync();
+            if (user == null)
+            {
+                return AccountResult<AuthResponseDto>.Unauthorized("Unable to find the signed-in user.");
+            }
+
+            var roles = await _userRepository.GetRolesAsync(user);
+            return AccountResult<AuthResponseDto>.Success(user.ToAuthResponseDto(roles));
+        }
+
+        //..............................................................................//
+
+        public async Task<AccountResult<AuthResponseDto>> UpdateCurrentAccountAsync(UpdateAccountProfileDto dto)
+        {
+            var user = await GetCurrentUserAsync();
+            if (user == null)
+            {
+                return AccountResult<AuthResponseDto>.Unauthorized("Unable to find the signed-in user.");
+            }
+
+            var email = dto.Email.Trim();
+            if (!await _userRepository.IsEmailUniqueAsync(email, user.Id))
+            {
+                return AccountResult<AuthResponseDto>.Failed("A user with this email address already exists.");
+            }
+
+            user.FirstName = dto.FirstName;
+            user.LastName = dto.LastName;
+            user.Email = email;
+            user.UserName = email;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            var result = await _userRepository.UpdateUserAsync(user);
+            if (!result.Succeeded)
+            {
+                return AccountResult<AuthResponseDto>.Failed(result.Errors.Select(e => e.Description));
+            }
+
+            var roles = await _userRepository.GetRolesAsync(user);
+            return AccountResult<AuthResponseDto>.Success(user.ToAuthResponseDto(roles));
+        }
+
+        //..............................................................................//
+
+        public async Task<AccountResult<object>> ChangeCurrentPasswordAsync(ChangePasswordRequestDto dto)
+        {
+            var user = await GetCurrentUserAsync();
+            if (user == null)
+            {
+                return AccountResult<object>.Unauthorized("Unable to find the signed-in user.");
+            }
+
+            var result = await _userRepository.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+            return result.Succeeded
+                ? AccountResult<object>.Success(new { })
+                : AccountResult<object>.Failed(result.Errors.Select(e => e.Description));
+        }
+
+        //..............................................................................//
+
+        public string GetCurrentUserId()
+        {
+            return CurrentPrincipal?.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? throw new InvalidOperationException("Unable to identify the signed-in user.");
+        }
+
+        //..............................................................................//
+
+        public async Task<ApplicationUser?> FindUserByEmailAsync(string email)
+        {
+            return await _userRepository.FindByEmailAsync(email);
+        }
+
+        //..............................................................................//
+
+        public async Task<IList<string>> GetUserRolesAsync(ApplicationUser user)
+        {
+            return await _userRepository.GetRolesAsync(user);
+        }
+
+        //..............................................................................//
+
+        private ClaimsPrincipal? CurrentPrincipal => _httpContextAccessor.HttpContext?.User;
+
+        //..............................................................................//
+
+        private async Task<ApplicationUser?> GetCurrentUserAsync()
+        {
+            return CurrentPrincipal == null ? null : await _userRepository.GetUserAsync(CurrentPrincipal);
         }
 
         //..............................................................................//
@@ -264,5 +381,3 @@ namespace GLMS.Api.Services
         //..............................................................................//
     }
 }
-
-

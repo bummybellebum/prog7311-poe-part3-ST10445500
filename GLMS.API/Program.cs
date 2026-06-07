@@ -102,7 +102,6 @@ namespace GLMS.Api
 			// Application services
 			builder.Services.AddScoped<IAuthService, AuthService>();
 			builder.Services.AddScoped<IAccountService, AccountService>();
-			builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 			builder.Services.AddScoped<IClientService, ClientService>();
 			builder.Services.AddScoped<IContractService, ContractService>();
 			builder.Services.AddScoped<IContractDocumentService, ContractDocumentService>();

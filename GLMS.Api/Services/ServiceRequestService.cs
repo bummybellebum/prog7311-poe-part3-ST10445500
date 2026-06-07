@@ -38,18 +38,18 @@ namespace GLMS.Api.Services
         private readonly IServiceRequestRepository _serviceRequestRepository;
         private readonly IContractRepository _contractRepository;
         private readonly ICurrencyExchangeService _currencyExchangeService;
-        private readonly ICurrentUserService? _currentUserService;
+        private readonly IAccountService _accountService;
 
         public ServiceRequestService(
             IServiceRequestRepository serviceRequestRepository,
             IContractRepository contractRepository,
             ICurrencyExchangeService currencyExchangeService,
-            ICurrentUserService? currentUserService = null)
+            IAccountService accountService)
         {
             _serviceRequestRepository = serviceRequestRepository;
             _contractRepository = contractRepository;
             _currencyExchangeService = currencyExchangeService;
-            _currentUserService = currentUserService;
+            _accountService = accountService;
         }
 
         //..............................................................................//
@@ -270,8 +270,7 @@ namespace GLMS.Api.Services
 
         private string GetCurrentUserId()
         {
-            return _currentUserService?.UserId
-                ?? throw new InvalidOperationException("Unable to identify the signed-in user.");
+            return _accountService.GetCurrentUserId();
         }
 
         //..............................................................................//

@@ -23,9 +23,9 @@ namespace GLMS.Api.DTOs.Mappings
             };
         }
 
-        public static AdminUserListDto ToAdminUserListDto(this ApplicationUser user, string role)
+        public static UserListDto ToUserListDto(this ApplicationUser user, string role)
         {
-            return new AdminUserListDto
+            return new UserListDto
             {
                 UserId = user.Id,
                 Email = user.Email ?? string.Empty,
@@ -37,9 +37,9 @@ namespace GLMS.Api.DTOs.Mappings
             };
         }
 
-        public static AdminUserDetailDto ToAdminUserDetailDto(this ApplicationUser user, string role)
+        public static UserDetailDto ToUserDetailDto(this ApplicationUser user, string role)
         {
-            return new AdminUserDetailDto
+            return new UserDetailDto
             {
                 UserId = user.Id,
                 FirstName = user.FirstName,

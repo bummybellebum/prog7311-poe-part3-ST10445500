@@ -3,7 +3,7 @@ using GLMS.Api.Models;
 
 namespace GLMS.Api.DTOs.Auth
 {
-    public class AdminUserListDto
+    public class UserListDto
     {
         public string UserId { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
@@ -17,7 +17,7 @@ namespace GLMS.Api.DTOs.Auth
             : $"{FirstName} {LastName}".Trim();
     }
 
-    public class AdminUserDetailDto
+    public class UserDetailDto
     {
         public string UserId { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
@@ -27,7 +27,7 @@ namespace GLMS.Api.DTOs.Auth
         public bool IsActive { get; set; }
     }
 
-    public class CreateAdminUserDto
+    public class CreateUserDto
     {
         [StringLength(100)]
         public string? FirstName { get; set; }
@@ -53,7 +53,7 @@ namespace GLMS.Api.DTOs.Auth
         public bool IsActive { get; set; } = true;
     }
 
-    public class UpdateAdminUserDto
+    public class UpdateUserDto
     {
         [Required]
         public string UserId { get; set; } = string.Empty;
@@ -74,7 +74,7 @@ namespace GLMS.Api.DTOs.Auth
         public bool IsActive { get; set; }
     }
 
-    public class ResetAdminPasswordDto
+    public class ResetUserPasswordDto
     {
         [Required]
         public string UserId { get; set; } = string.Empty;

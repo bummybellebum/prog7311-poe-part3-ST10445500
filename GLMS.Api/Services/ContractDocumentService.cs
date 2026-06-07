@@ -49,20 +49,20 @@ namespace GLMS.Api.Services
         private readonly IContractRepository _contractRepository;
         private readonly IWebHostEnvironment _environment;
         private readonly IConfiguration _configuration;
-        private readonly ICurrentUserService? _currentUserService;
+        private readonly IAccountService _accountService;
 
         public ContractDocumentService(
             IContractDocumentRepository documentRepository,
             IContractRepository contractRepository,
             IWebHostEnvironment environment,
             IConfiguration configuration,
-            ICurrentUserService? currentUserService = null)
+            IAccountService accountService)
         {
             _documentRepository = documentRepository;
             _contractRepository = contractRepository;
             _environment = environment;
             _configuration = configuration;
-            _currentUserService = currentUserService;
+            _accountService = accountService;
         }
 
         //..............................................................................//
@@ -326,8 +326,7 @@ namespace GLMS.Api.Services
 
         private string GetCurrentUserId()
         {
-            return _currentUserService?.UserId
-                ?? throw new InvalidOperationException("Unable to identify the signed-in user.");
+            return _accountService.GetCurrentUserId();
         }
 
         //..............................................................................//
