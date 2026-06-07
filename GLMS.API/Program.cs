@@ -22,9 +22,11 @@ namespace GLMS.Api
 			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
 				?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
+			// Database
 			builder.Services.AddDbContext<ApplicationDbContext>(options =>
 				options.UseSqlServer(connectionString));
 
+			// Identity and JWT authentication
 			builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 			{
 				options.Password.RequireDigit = true;
@@ -66,18 +68,26 @@ namespace GLMS.Api
 					.Build();
 			});
 
+			builder.Services.AddHttpContextAccessor();
+
+			// Repositories
 			builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 			builder.Services.AddScoped<IClientRepository, ClientRepository>();
 			builder.Services.AddScoped<IContractRepository, ContractRepository>();
 			builder.Services.AddScoped<IContractDocumentRepository, ContractDocumentRepository>();
 			builder.Services.AddScoped<IServiceRequestRepository, ServiceRequestRepository>();
 
+			// Application services
+			builder.Services.AddScoped<IAuthService, AuthService>();
 			builder.Services.AddScoped<IAccountService, AccountService>();
+			builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 			builder.Services.AddScoped<IClientService, ClientService>();
 			builder.Services.AddScoped<IContractService, ContractService>();
 			builder.Services.AddScoped<IContractDocumentService, ContractDocumentService>();
 			builder.Services.AddScoped<IServiceRequestService, ServiceRequestService>();
 			builder.Services.AddScoped<ILookupService, LookupService>();
+
+			// External HTTP clients
 			builder.Services.AddHttpClient<ICurrencyExchangeService, CurrencyExchangeService>((sp, client) =>
 			{
 				var configuration = sp.GetRequiredService<IConfiguration>();
@@ -86,6 +96,7 @@ namespace GLMS.Api
 				client.Timeout = TimeSpan.FromSeconds(15);
 			});
 
+			// Controllers and Swagger
 			builder.Services.AddControllers(options =>
 				{
 					options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
@@ -168,8 +179,8 @@ namespace GLMS.Api
 			var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 			var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-			const string adminEmail = "admin@gmail.com";
-			const string adminPassword = "Admin1234!";
+			var adminEmail = app.Configuration["SeedAdmin:Email"] ?? "admin@gmail.com";
+			var adminPassword = app.Configuration["SeedAdmin:Password"];
 
 			foreach (var role in ApplicationRoles.All)
 			{
@@ -182,6 +193,11 @@ namespace GLMS.Api
 			var adminUser = await userManager.FindByEmailAsync(adminEmail);
 			if (adminUser == null)
 			{
+				if (string.IsNullOrWhiteSpace(adminPassword))
+				{
+					throw new InvalidOperationException("Seed admin password is missing. Configure SeedAdmin:Password before starting with an empty database.");
+				}
+
 				adminUser = new ApplicationUser
 				{
 					UserName = adminEmail,

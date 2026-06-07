@@ -8,9 +8,14 @@ namespace GLMS.Api.Models
     public static class ApplicationRoles
     {
         public const string Admin = "Admin";
+        public const string ContractManager = "ContractManager";
         public const string LogisticsManager = "LogisticsManager";
 
-        public static readonly string[] All = [Admin, LogisticsManager];
+        public const string AdminOrContractManager = Admin + "," + ContractManager;
+        public const string AdminOrLogisticsManager = Admin + "," + LogisticsManager;
+        public const string AllRoles = Admin + "," + ContractManager + "," + LogisticsManager;
+
+        public static readonly string[] All = [Admin, ContractManager, LogisticsManager];
     }
 }
 

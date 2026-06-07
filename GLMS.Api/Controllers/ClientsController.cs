@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace GLMS.Api.Controllers
 {
     [ApiController]
-    [Authorize(Roles = ApplicationRoles.Admin)]
+    [Authorize(Roles = ApplicationRoles.AllRoles)]
     [Route("api/[controller]")]
     public class ClientsController : ControllerBase
     {
@@ -44,6 +44,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         [HttpPost]
         public async Task<IActionResult> Create(CreateClientDto dto)
         {
@@ -61,6 +62,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, UpdateClientDto dto)
         {
@@ -93,6 +95,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.Admin)]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {

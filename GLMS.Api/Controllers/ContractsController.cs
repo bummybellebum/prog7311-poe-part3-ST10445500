@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using GLMS.Api.DTOs;
 using GLMS.Api.DTOs.Contracts;
 using GLMS.Api.DTOs.Documents;
@@ -15,19 +14,22 @@ using Microsoft.AspNetCore.Mvc;
 namespace GLMS.Api.Controllers
 {
     [ApiController]
-    [Authorize(Roles = ApplicationRoles.Admin)]
+    [Authorize(Roles = ApplicationRoles.AllRoles)]
     [Route("api/[controller]")]
     public class ContractsController : ControllerBase
     {
         private readonly IContractService _contractService;
         private readonly IContractDocumentService _contractDocumentService;
+        private readonly ICurrentUserService _currentUserService;
 
         public ContractsController(
             IContractService contractService,
-            IContractDocumentService contractDocumentService)
+            IContractDocumentService contractDocumentService,
+            ICurrentUserService currentUserService)
         {
             _contractService = contractService;
             _contractDocumentService = contractDocumentService;
+            _currentUserService = currentUserService;
         }
 
         //..............................................................................//
@@ -50,6 +52,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         [HttpPost]
         public async Task<IActionResult> Create(CreateContractDto dto)
         {
@@ -68,6 +71,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, UpdateContractDto dto)
         {
@@ -100,6 +104,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         [HttpPatch("{id:int}/status")]
         public async Task<IActionResult> UpdateStatus(int id, UpdateContractStatusDto dto)
         {
@@ -116,6 +121,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.Admin)]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -154,6 +160,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.Admin)]
         [HttpPost("{contractId:int}/documents")]
         public async Task<IActionResult> CreateDocument(int contractId, CreateContractDocumentDto dto)
         {
@@ -180,6 +187,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.Admin)]
         [HttpPut("documents/{documentId:int}")]
         public async Task<IActionResult> UpdateDocument(int documentId, UpdateContractDocumentDto dto)
         {
@@ -212,6 +220,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.Admin)]
         [HttpDelete("documents/{documentId:int}")]
         public async Task<IActionResult> DeleteDocument(int documentId)
         {
@@ -232,6 +241,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         [HttpPost("{contractId:int}/signed-agreement")]
         public async Task<IActionResult> UploadSignedAgreement(int contractId, IFormFile file)
         {
@@ -268,7 +278,7 @@ namespace GLMS.Api.Controllers
 
         private string GetUserId()
         {
-            return User.FindFirstValue(ClaimTypes.NameIdentifier)
+            return _currentUserService.UserId
                 ?? throw new InvalidOperationException("Unable to identify the signed-in user.");
         }
 

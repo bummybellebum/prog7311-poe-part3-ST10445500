@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using GLMS.Api.DTOs.Auth;
 using GLMS.Api.Models;
 using Microsoft.AspNetCore.Identity;
@@ -14,119 +13,10 @@ namespace GLMS.Api.Services
     public class AccountService : IAccountService
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public AccountService(
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager)
+        public AccountService(UserManager<ApplicationUser> userManager)
         {
             _userManager = userManager;
-            _signInManager = signInManager;
-        }
-
-        //..............................................................................//
-
-        public async Task<LoginResult> LoginAsync(LoginRequestDto dto)
-        {
-            var email = dto.Email.Trim();
-            var user = await _userManager.FindByEmailAsync(email);
-
-            if (user == null)
-            {
-                return LoginResult.FailedLogin("Invalid login attempt.");
-            }
-
-            if (!user.IsActive)
-            {
-                return LoginResult.FailedLogin("This account is inactive. Please contact an administrator.");
-            }
-
-            var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
-            if (result.Succeeded)
-            {
-                await _signInManager.SignInAsync(user, dto.RememberMe);
-                return LoginResult.SuccessLogin();
-            }
-
-            if (result.IsLockedOut)
-            {
-                return LoginResult.LockedOut();
-            }
-
-            if (result.RequiresTwoFactor)
-            {
-                return LoginResult.TwoFactorRequired();
-            }
-
-            return LoginResult.FailedLogin("Invalid login attempt.");
-        }
-
-        //..............................................................................//
-
-        public Task LogoutAsync()
-        {
-            return _signInManager.SignOutAsync();
-        }
-
-        //..............................................................................//
-
-        public async Task<UpdateProfileRequestDto?> GetProfileAsync(ClaimsPrincipal user)
-        {
-            var appUser = await _userManager.GetUserAsync(user);
-            if (appUser == null)
-            {
-                return null;
-            }
-
-            return new UpdateProfileRequestDto
-            {
-                FirstName = appUser.FirstName,
-                LastName = appUser.LastName,
-                Email = appUser.Email ?? string.Empty
-            };
-        }
-
-        //..............................................................................//
-
-        public async Task<AccountResult> UpdateProfileAsync(ClaimsPrincipal user, UpdateProfileRequestDto dto)
-        {
-            var appUser = await _userManager.GetUserAsync(user);
-            if (appUser == null)
-            {
-                return AccountResult.Failed("Unable to find the signed-in user.");
-            }
-
-            appUser.FirstName = dto.FirstName;
-            appUser.LastName = dto.LastName;
-
-            var result = await _userManager.UpdateAsync(appUser);
-            if (!result.Succeeded)
-            {
-                return ToAccountResult(result);
-            }
-
-            await _signInManager.RefreshSignInAsync(appUser);
-            return AccountResult.Success();
-        }
-
-        //..............................................................................//
-
-        public async Task<AccountResult> ChangePasswordAsync(ClaimsPrincipal user, ChangePasswordRequestDto dto)
-        {
-            var appUser = await _userManager.GetUserAsync(user);
-            if (appUser == null)
-            {
-                return AccountResult.Failed("Unable to find the signed-in user.");
-            }
-
-            var result = await _userManager.ChangePasswordAsync(appUser, dto.CurrentPassword, dto.NewPassword);
-            if (!result.Succeeded)
-            {
-                return ToAccountResult(result);
-            }
-
-            await _signInManager.RefreshSignInAsync(appUser);
-            return AccountResult.Success();
         }
 
         //..............................................................................//

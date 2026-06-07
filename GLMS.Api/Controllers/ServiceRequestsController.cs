@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using GLMS.Api.DTOs;
 using GLMS.Api.DTOs.ServiceRequests;
 using GLMS.Api.Models;
@@ -14,19 +13,22 @@ using Microsoft.AspNetCore.Mvc;
 namespace GLMS.Api.Controllers
 {
     [ApiController]
-    [Authorize(Roles = "Admin,LogisticsManager")]
+    [Authorize(Roles = ApplicationRoles.AllRoles)]
     [Route("api/[controller]")]
     public class ServiceRequestsController : ControllerBase
     {
         private readonly IServiceRequestService _serviceRequestService;
         private readonly ICurrencyExchangeService _currencyExchangeService;
+        private readonly ICurrentUserService _currentUserService;
 
         public ServiceRequestsController(
             IServiceRequestService serviceRequestService,
-            ICurrencyExchangeService currencyExchangeService)
+            ICurrencyExchangeService currencyExchangeService,
+            ICurrentUserService currentUserService)
         {
             _serviceRequestService = serviceRequestService;
             _currencyExchangeService = currencyExchangeService;
+            _currentUserService = currentUserService;
         }
 
         //..............................................................................//
@@ -49,6 +51,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrLogisticsManager)]
         [HttpPost]
         public async Task<IActionResult> Create(CreateServiceRequestDto dto)
         {
@@ -71,6 +74,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.Admin)]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, UpdateServiceRequestDto dto)
         {
@@ -103,6 +107,28 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrLogisticsManager)]
+        [HttpPatch("{id:int}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, UpdateServiceRequestStatusDto dto)
+        {
+            try
+            {
+                await _serviceRequestService.UpdateStatusAsync(id, dto.ServiceRequestStatusId);
+                return Ok();
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+            {
+                return BadRequest(new { errors = new[] { ex.Message } });
+            }
+        }
+
+        //..............................................................................//
+
+        [Authorize(Roles = ApplicationRoles.Admin)]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -123,6 +149,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrLogisticsManager)]
         [HttpGet("currencies")]
         public async Task<IActionResult> GetCurrencies(CancellationToken cancellationToken)
         {
@@ -131,6 +158,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrLogisticsManager)]
         [HttpGet("exchange-rate")]
         public async Task<IActionResult> GetExchangeRate(string currencyCode, CancellationToken cancellationToken)
         {
@@ -154,7 +182,7 @@ namespace GLMS.Api.Controllers
 
         private string GetUserId()
         {
-            return User.FindFirstValue(ClaimTypes.NameIdentifier)
+            return _currentUserService.UserId
                 ?? throw new InvalidOperationException("Unable to identify the signed-in user.");
         }
 

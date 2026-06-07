@@ -1,10 +1,8 @@
-using System.Security.Claims;
 using GLMS.Api.Data;
 using GLMS.Api.DTOs.Auth;
 using GLMS.Api.Models;
 using GLMS.Api.Services;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,54 +17,11 @@ namespace GLMS.Tests.Unit.Services
     public class AccountServiceTests
     {
         [Fact]
-        public async Task LoginAsync_WithValidCredentials_Succeeds()
+        public void ApplicationRoles_All_ContainsExactlySupportedRoles()
         {
-            var fixture = CreateFixture();
-            await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
-
-            var result = await fixture.AccountService.LoginAsync(new LoginRequestDto
-            {
-                Email = "user@glms.local",
-                Password = "Password123!"
-            });
-
-            Assert.True(result.Succeeded);
-        }
-
-        //........................................................................................//
-
-        [Fact]
-        public async Task LoginAsync_WithInvalidPassword_Fails()
-        {
-            var fixture = CreateFixture();
-            await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
-
-            var result = await fixture.AccountService.LoginAsync(new LoginRequestDto
-            {
-                Email = "user@glms.local",
-                Password = "WrongPassword123!"
-            });
-
-            Assert.False(result.Succeeded);
-            Assert.Contains("Invalid login attempt.", result.Errors);
-        }
-
-        //........................................................................................//
-
-        [Fact]
-        public async Task LoginAsync_WithInactiveUser_FailsBeforeSignIn()
-        {
-            var fixture = CreateFixture();
-            await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: false);
-
-            var result = await fixture.AccountService.LoginAsync(new LoginRequestDto
-            {
-                Email = "user@glms.local",
-                Password = "Password123!"
-            });
-
-            Assert.False(result.Succeeded);
-            Assert.Contains(result.Errors, error => error.Contains("inactive", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(
+                [ApplicationRoles.Admin, ApplicationRoles.ContractManager, ApplicationRoles.LogisticsManager],
+                ApplicationRoles.All);
         }
 
         //........................................................................................//
@@ -98,6 +53,52 @@ namespace GLMS.Tests.Unit.Services
         //........................................................................................//
 
         [Fact]
+        public async Task CreateUserAsync_WithContractManagerRole_CreatesConfirmedUser()
+        {
+            var fixture = CreateFixture();
+
+            var result = await fixture.AccountService.CreateUserAsync(new CreateAdminUserDto
+            {
+                FirstName = "Contract",
+                LastName = "Manager",
+                Email = "contracts@glms.local",
+                Role = ApplicationRoles.ContractManager,
+                TemporaryPassword = "Password123!",
+                ConfirmTemporaryPassword = "Password123!",
+                IsActive = true
+            });
+
+            var user = await fixture.UserManager.FindByEmailAsync("contracts@glms.local");
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(user);
+            Assert.True(user.EmailConfirmed);
+            Assert.True(await fixture.UserManager.IsInRoleAsync(user, ApplicationRoles.ContractManager));
+        }
+
+        //........................................................................................//
+
+        [Fact]
+        public async Task CreateUserAsync_WithUnsupportedRole_Fails()
+        {
+            var fixture = CreateFixture();
+
+            var result = await fixture.AccountService.CreateUserAsync(new CreateAdminUserDto
+            {
+                Email = "unsupported@glms.local",
+                Role = "UnsupportedRole",
+                TemporaryPassword = "Password123!",
+                ConfirmTemporaryPassword = "Password123!",
+                IsActive = true
+            });
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("The selected role is not supported.", result.Errors);
+        }
+
+        //........................................................................................//
+
+        [Fact]
         public async Task UpdateUserAsync_UpdatesRoleAndActiveStatus()
         {
             var fixture = CreateFixture();
@@ -124,45 +125,6 @@ namespace GLMS.Tests.Unit.Services
             Assert.False(await fixture.UserManager.IsInRoleAsync(updated, ApplicationRoles.LogisticsManager));
         }
 
-        //........................................................................................//
-
-        [Fact]
-        public async Task ChangePasswordAsync_WithValidCurrentPassword_Succeeds()
-        {
-            var fixture = CreateFixture();
-            var user = await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
-
-            var result = await fixture.AccountService.ChangePasswordAsync(CreatePrincipal(user), new ChangePasswordRequestDto
-            {
-                CurrentPassword = "Password123!",
-                NewPassword = "NewPassword123!",
-                ConfirmPassword = "NewPassword123!"
-            });
-
-            Assert.True(result.Succeeded);
-            Assert.True(await fixture.UserManager.CheckPasswordAsync(user, "NewPassword123!"));
-        }
-
-        //........................................................................................//
-
-        [Fact]
-        public async Task ChangePasswordAsync_WithInvalidCurrentPassword_Fails()
-        {
-            var fixture = CreateFixture();
-            var user = await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
-
-            var result = await fixture.AccountService.ChangePasswordAsync(CreatePrincipal(user), new ChangePasswordRequestDto
-            {
-                CurrentPassword = "WrongPassword123!",
-                NewPassword = "NewPassword123!",
-                ConfirmPassword = "NewPassword123!"
-            });
-
-            Assert.False(result.Succeeded);
-        }
-
-        //........................................................................................//
-
         [Fact]
         public async Task ResetPasswordAsync_WithTemporaryPassword_UpdatesPassword()
         {
@@ -178,20 +140,6 @@ namespace GLMS.Tests.Unit.Services
 
             Assert.True(result.Succeeded);
             Assert.True(await fixture.UserManager.CheckPasswordAsync(user, "Temporary123!"));
-        }
-
-        //........................................................................................//
-
-        private static ClaimsPrincipal CreatePrincipal(ApplicationUser user)
-        {
-            var identity = new ClaimsIdentity(
-                [
-                    new Claim(ClaimTypes.NameIdentifier, user.Id),
-                    new Claim(ClaimTypes.Name, user.Email ?? string.Empty)
-                ],
-                IdentityConstants.ApplicationScheme);
-
-            return new ClaimsPrincipal(identity);
         }
 
         //........................................................................................//
@@ -215,8 +163,6 @@ namespace GLMS.Tests.Unit.Services
             services.AddScoped<IAccountService, AccountService>();
 
             var provider = services.BuildServiceProvider();
-            var httpContext = new DefaultHttpContext { RequestServices = provider };
-            provider.GetRequiredService<IHttpContextAccessor>().HttpContext = httpContext;
 
             var roleManager = provider.GetRequiredService<RoleManager<IdentityRole>>();
             foreach (var role in ApplicationRoles.All)

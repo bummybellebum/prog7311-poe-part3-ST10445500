@@ -29,6 +29,9 @@ namespace GLMS.Api.Services
         //updates an existing service request record
         Task UpdateAsync(ServiceRequest serviceRequest);
 
+        //updates only the service request status
+        Task UpdateStatusAsync(int id, int statusId);
+
         //removes a service request record from the database
         Task DeleteAsync(int id);
     }
@@ -211,6 +214,28 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
+        //updates only the service request status
+        public async Task UpdateStatusAsync(int id, int statusId)
+        {
+            if (id <= 0)
+                throw new ArgumentException("Invalid service request ID.", nameof(id));
+
+            if (statusId <= 0)
+                throw new ArgumentException("Valid service request status ID is required.", nameof(statusId));
+
+            var serviceRequest = await _serviceRequestRepository.GetByIdAsync(id);
+            if (serviceRequest == null)
+                throw new KeyNotFoundException($"Service request with ID {id} not found.");
+
+            serviceRequest.ServiceRequestStatusId = statusId;
+            serviceRequest.UpdatedAt = DateTime.UtcNow;
+
+            _serviceRequestRepository.Update(serviceRequest);
+            await _serviceRequestRepository.SaveChangesAsync();
+        }
+
+        //..............................................................................//
+        
         //removes a service request record from the database
         public async Task DeleteAsync(int id)
         {
