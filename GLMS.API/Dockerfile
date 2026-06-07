@@ -12,19 +12,19 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["GLMS.API/GLMS.API.csproj", "GLMS.API/"]
-RUN dotnet restore "./GLMS.API/GLMS.API.csproj"
+COPY ["GLMS.Api/GLMS.Api.csproj", "GLMS.Api/"]
+RUN dotnet restore "./GLMS.Api/GLMS.Api.csproj"
 COPY . .
-WORKDIR "/src/GLMS.API"
-RUN dotnet build "./GLMS.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/GLMS.Api"
+RUN dotnet build "./GLMS.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./GLMS.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./GLMS.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "GLMS.API.dll"]
+ENTRYPOINT ["dotnet", "GLMS.Api.dll"]

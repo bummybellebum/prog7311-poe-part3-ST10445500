@@ -1,5 +1,5 @@
 
-namespace GLMS.API
+namespace GLMS.Api
 {
 	public class Program
 	{

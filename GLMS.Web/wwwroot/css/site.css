@@ -19,6 +19,26 @@ html {
 
 body {
   margin-bottom: 60px;
+  background-color: #f8f9fb;
+}
+
+.quick-actions-bar {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.65rem;
+}
+
+.card {
+  border-radius: 0.75rem;
+}
+
+.table > :not(caption) > * > * {
+  padding: 0.85rem 0.75rem;
+}
+
+.page-header {
+  margin-bottom: 1.25rem;
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {

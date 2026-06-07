@@ -1,0 +1,93 @@
+@model GLMS.Web.ViewModels.ServiceRequests.ServiceRequestFilterViewModel
+@{
+    ViewData["Title"] = "Service Requests";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">Service Requests</h1>
+        <p class="text-muted mb-0">Track service request activity and currency-converted values.</p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">Create Request</a>
+</div>
+
+@if (Model.ContractId.HasValue || Model.StatusId.HasValue)
+{
+    <div class="small text-muted mb-2">Showing filtered results.</div>
+}
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label asp-for="ContractId" class="form-label">Contract</label>
+                <select asp-for="ContractId" asp-items="Model.ContractOptions" class="form-select">
+                    <option value="">All contracts</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="StatusId" class="form-label">Status</label>
+                <select asp-for="StatusId" asp-items="Model.StatusOptions" class="form-select">
+                    <option value="">All statuses</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-primary">Filter</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        @if (!Model.Requests.Any())
+        {
+            <div class="p-4 text-center text-muted">No service requests found.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Contract</th>
+                            <th>Status</th>
+                            <th>Original Amount</th>
+                            <th>ZAR Amount</th>
+                            <th>Requested Date</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var req in Model.Requests)
+                        {
+                            <tr>
+                                <td>@(req.Contract?.Title ?? "-")</td>
+                                <td>@await Html.PartialAsync("_StatusBadge", req.ServiceRequestStatus?.StatusName ?? "Unknown")</td>
+                                <td>@req.AmountOriginal.ToString("N2") @req.OriginalCurrencyCode</td>
+                                <td>@req.AmountZAR.ToString("N2")</td>
+                                <td>@req.RequestedAt.ToString("yyyy-MM-dd")</td>
+                                <td class="text-end">
+                                    <a asp-action="Create" asp-route-contractId="@req.ContractId" class="btn btn-sm btn-success">+ Similar</a>
+                                    <a asp-action="Details" asp-route-id="@req.ServiceRequestId" class="btn btn-sm btn-outline-secondary">Details</a>
+                                    <a asp-action="Edit" asp-route-id="@req.ServiceRequestId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <a asp-action="Delete" asp-route-id="@req.ServiceRequestId" class="btn btn-sm btn-outline-danger">Delete</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

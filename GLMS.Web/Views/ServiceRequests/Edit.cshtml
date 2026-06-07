@@ -1,0 +1,129 @@
+@model GLMS.Web.ViewModels.ServiceRequests.ServiceRequestFormViewModel
+@{
+    ViewData["Title"] = "Edit Service Request";
+}
+
+<div class="mb-3">
+    <h1 class="h3 mb-1">Edit Service Request</h1>
+    <p class="text-muted mb-0">Update request details and recalculate ZAR amount.</p>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form asp-action="Edit" method="post" novalidate>
+            <input asp-for="ServiceRequestId" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="ContractId" class="form-label"></label>
+                    <select asp-for="ContractId" asp-items="Model.ContractOptions" class="form-select"></select>
+                    <span asp-validation-for="ContractId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ServiceRequestStatusId" class="form-label"></label>
+                    <select asp-for="ServiceRequestStatusId" asp-items="Model.StatusOptions" class="form-select"></select>
+                    <span asp-validation-for="ServiceRequestStatusId" class="text-danger"></span>
+                </div>
+                <div class="col-md-12">
+                    <label asp-for="Description" class="form-label"></label>
+                    <input asp-for="Description" class="form-control" />
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="AmountOriginal" class="form-label"></label>
+                    <input asp-for="AmountOriginal" class="form-control" step="0.01" />
+                    <span asp-validation-for="AmountOriginal" class="text-danger"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="OriginalCurrencyCode" class="form-label"></label>
+                    <select asp-for="OriginalCurrencyCode" asp-items="Model.CurrencyOptions" class="form-select"></select>
+                    <span asp-validation-for="OriginalCurrencyCode" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="ExchangeRateToZar" class="form-label"></label>
+                    <input asp-for="ExchangeRateToZar" class="form-control" step="0.000001" readonly />
+                    <span asp-validation-for="ExchangeRateToZar" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="AmountZar" class="form-label"></label>
+                    <input asp-for="AmountZar" class="form-control" step="0.01" readonly />
+                    <span asp-validation-for="AmountZar" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <button type="button" id="btnRefreshRate" class="btn btn-outline-primary btn-sm">Get Latest Rate</button>
+                    <span id="rateMessage" class="ms-2 small text-muted"></span>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const amountInput = document.getElementById('AmountOriginal');
+            const currencyInput = document.getElementById('OriginalCurrencyCode');
+            const rateInput = document.getElementById('ExchangeRateToZar');
+            const zarInput = document.getElementById('AmountZar');
+            const refreshBtn = document.getElementById('btnRefreshRate');
+            const message = document.getElementById('rateMessage');
+            let rateFetchTimer;
+
+            function recalcZar() {
+                const amount = parseFloat(amountInput.value || '0');
+                const rate = parseFloat(rateInput.value || '0');
+                if (amount > 0 && rate > 0) {
+                    zarInput.value = (amount * rate).toFixed(2);
+                } else {
+                    zarInput.value = '';
+                }
+            }
+
+            function queueRateFetch() {
+                clearTimeout(rateFetchTimer);
+                rateFetchTimer = setTimeout(fetchRate, 300);
+            }
+
+            async function fetchRate() {
+                const code = (currencyInput.value || '').trim().toUpperCase();
+                if (!code) {
+                    message.textContent = 'Enter a currency code first.';
+                    message.className = 'ms-2 small text-danger';
+                    return;
+                }
+
+                message.textContent = 'Loading rate...';
+                message.className = 'ms-2 small text-muted';
+
+                const response = await fetch(`@Url.Action("GetExchangeRate", "ServiceRequests")?currencyCode=${encodeURIComponent(code)}`);
+                const payload = await response.json();
+
+                if (!response.ok) {
+                    message.textContent = payload.message || 'Unable to retrieve rate.';
+                    message.className = 'ms-2 small text-danger';
+                    return;
+                }
+
+                rateInput.value = Number(payload.rate).toFixed(6);
+                recalcZar();
+                message.textContent = `Rate updated: 1 ${code} = ${Number(payload.rate).toFixed(6)} ZAR`;
+                message.className = 'ms-2 small text-success';
+            }
+
+            refreshBtn.addEventListener('click', fetchRate);
+            amountInput.addEventListener('input', queueRateFetch);
+            currencyInput.addEventListener('change', queueRateFetch);
+
+            fetchRate();
+        })();
+    </script>
+}

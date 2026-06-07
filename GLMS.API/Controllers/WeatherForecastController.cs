@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace GLMS.API.Controllers
+namespace GLMS.Api.Controllers
 {
 	[ApiController]
 	[Route("[controller]")]
