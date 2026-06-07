@@ -160,7 +160,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
-        [Authorize(Roles = ApplicationRoles.Admin)]
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         [HttpPost("{contractId:int}/documents")]
         public async Task<IActionResult> CreateDocument(int contractId, CreateContractDocumentDto dto)
         {
@@ -187,7 +187,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
-        [Authorize(Roles = ApplicationRoles.Admin)]
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         [HttpPut("documents/{documentId:int}")]
         public async Task<IActionResult> UpdateDocument(int documentId, UpdateContractDocumentDto dto)
         {
@@ -220,7 +220,7 @@ namespace GLMS.Api.Controllers
 
         //..............................................................................//
 
-        [Authorize(Roles = ApplicationRoles.Admin)]
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         [HttpDelete("documents/{documentId:int}")]
         public async Task<IActionResult> DeleteDocument(int documentId)
         {
