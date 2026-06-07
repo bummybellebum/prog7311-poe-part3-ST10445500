@@ -3,7 +3,7 @@
   <PropertyGroup Label="Globals">
     <ProjectVersion>2.1</ProjectVersion>
     <DockerTargetOS>Linux</DockerTargetOS>
-    <DockerComposeProjectName>glms-stack-st10445500</DockerComposeProjectName>
+    <DockerComposeProjectName>glms-stack</DockerComposeProjectName>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
     <DockerServiceName>frontend-web</DockerServiceName>
     <DockerServiceUrl>{Scheme}://localhost:{ServicePort}</DockerServiceUrl>
@@ -11,6 +11,6 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="docker-compose.yml" />
-    <None Include="..\.dockerignore" />
+    <None Include=".dockerignore" />
   </ItemGroup>
 </Project>
