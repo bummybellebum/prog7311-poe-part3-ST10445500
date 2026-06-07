@@ -23,12 +23,19 @@ namespace GLMS.Api
 		{
 			var builder = WebApplication.CreateBuilder(args);
 
-			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-				?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+			var isTesting = builder.Environment.IsEnvironment("Testing");
+			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+			if (string.IsNullOrWhiteSpace(connectionString) && !isTesting)
+			{
+				throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+			}
 
 			// Database
-			builder.Services.AddDbContext<ApplicationDbContext>(options =>
-				options.UseSqlServer(connectionString));
+			if (!isTesting)
+			{
+				builder.Services.AddDbContext<ApplicationDbContext>(options =>
+					options.UseSqlServer(connectionString));
+			}
 
 			// Identity and JWT authentication
 			builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -43,8 +50,13 @@ namespace GLMS.Api
 			.AddEntityFrameworkStores<ApplicationDbContext>()
 			.AddDefaultTokenProviders();
 
-			var jwtKey = builder.Configuration["Jwt:Key"]
-				?? throw new InvalidOperationException("JWT key is missing.");
+			var jwtKey = builder.Configuration["Jwt:Key"];
+			if (string.IsNullOrWhiteSpace(jwtKey) && !isTesting)
+			{
+				throw new InvalidOperationException("JWT key is missing.");
+			}
+
+			jwtKey ??= "01234567890123456789012345678901";
 
 			builder.Services.AddAuthentication(options =>
 			{
@@ -190,22 +202,25 @@ namespace GLMS.Api
 
 			app.MapControllers();
 
-			try
+			if (!app.Environment.IsEnvironment("Testing"))
 			{
-				using (var scope = app.Services.CreateScope())
+				try
 				{
-					var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-					db.Database.Migrate();
+					using (var scope = app.Services.CreateScope())
+					{
+						var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+						db.Database.Migrate();
+					}
 				}
-			}
-			catch (Exception ex)
-			{
-				var logger = app.Services.GetRequiredService<ILogger<Program>>();
-				logger.LogError(ex, "An error occurred while migrating or initializing the database.");
-				throw;
-			}
+				catch (Exception ex)
+				{
+					var logger = app.Services.GetRequiredService<ILogger<Program>>();
+					logger.LogError(ex, "An error occurred while migrating or initializing the database.");
+					throw;
+				}
 
-			SeedDefaultAdminAsync(app).GetAwaiter().GetResult();
+				SeedDefaultAdminAsync(app).GetAwaiter().GetResult();
+			}
 
 			app.Run();
 		}
