@@ -7,11 +7,13 @@ namespace GLMS.Api.Models
 	public static class ServiceRequestStatusConstants
 	{
 		public const int PendingId = 1;
-		public const int InProgressId = 2;
-		public const int CompletedId = 3;
-		public const int CancelledId = 4;
+		public const int ApprovedId = 2;
+		public const int InProgressId = 3;
+		public const int CompletedId = 4;
+		public const int CancelledId = 5;
 
 		public const string PendingName = "Pending";
+		public const string ApprovedName = "Approved";
 		public const string InProgressName = "In Progress";
 		public const string CompletedName = "Completed";
 		public const string CancelledName = "Cancelled";

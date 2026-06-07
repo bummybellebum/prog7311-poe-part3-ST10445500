@@ -89,11 +89,11 @@ namespace GLMS.Api.Data
 
 			//add the default service request statuses to the database
 			builder.Entity<ServiceRequestStatus>().HasData(
-				new ServiceRequestStatus { ServiceRequestStatusId = 1, StatusName = "Pending" },
-				new ServiceRequestStatus { ServiceRequestStatusId = 2, StatusName = "Approved" },
-				new ServiceRequestStatus { ServiceRequestStatusId = 3, StatusName = "In Progress" },
-				new ServiceRequestStatus { ServiceRequestStatusId = 4, StatusName = "Completed" },
-				new ServiceRequestStatus { ServiceRequestStatusId = 5, StatusName = "Cancelled" }
+				new ServiceRequestStatus { ServiceRequestStatusId = ServiceRequestStatusConstants.PendingId, StatusName = ServiceRequestStatusConstants.PendingName },
+				new ServiceRequestStatus { ServiceRequestStatusId = ServiceRequestStatusConstants.ApprovedId, StatusName = ServiceRequestStatusConstants.ApprovedName },
+				new ServiceRequestStatus { ServiceRequestStatusId = ServiceRequestStatusConstants.InProgressId, StatusName = ServiceRequestStatusConstants.InProgressName },
+				new ServiceRequestStatus { ServiceRequestStatusId = ServiceRequestStatusConstants.CompletedId, StatusName = ServiceRequestStatusConstants.CompletedName },
+				new ServiceRequestStatus { ServiceRequestStatusId = ServiceRequestStatusConstants.CancelledId, StatusName = ServiceRequestStatusConstants.CancelledName }
 			);
 
 			//..............................................................................//
