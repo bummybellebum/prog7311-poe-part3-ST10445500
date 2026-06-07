@@ -3,16 +3,17 @@
     var status = (Model ?? string.Empty).Trim();
     var badgeClass = status.ToLowerInvariant() switch
     {
-        "active" => "bg-success-subtle text-success-emphasis border border-success-subtle",
-        "on hold" => "bg-warning-subtle text-warning-emphasis border border-warning-subtle",
-        "expired" => "bg-danger-subtle text-danger-emphasis border border-danger-subtle",
-        "draft" => "bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle",
-        "pending" => "bg-warning-subtle text-warning-emphasis border border-warning-subtle",
-        "approved" => "bg-info-subtle text-info-emphasis border border-info-subtle",
-        "in progress" => "bg-primary-subtle text-primary-emphasis border border-primary-subtle",
-        "completed" => "bg-success-subtle text-success-emphasis border border-success-subtle",
-        "cancelled" => "bg-danger-subtle text-danger-emphasis border border-danger-subtle",
-        _ => "bg-light text-dark border"
+        "active" => "status-success",
+        "on hold" => "status-warning",
+        "expired" => "status-danger",
+        "draft" => "status-muted",
+        "pending" => "status-warning",
+        "approved" => "status-info",
+        "in progress" => "status-primary",
+        "completed" => "status-success",
+        "cancelled" => "status-danger",
+        "inactive" => "status-muted",
+        _ => "status-muted"
     };
 }
-<span class="badge rounded-pill @badgeClass">@(string.IsNullOrWhiteSpace(status) ? "Unknown" : status)</span>
+<span class="status-badge @badgeClass">@(string.IsNullOrWhiteSpace(status) ? "Unknown" : status)</span>

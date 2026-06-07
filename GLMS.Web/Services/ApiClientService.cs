@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -32,7 +33,7 @@ namespace GLMS.Web.Services
         protected async Task<T?> GetAsync<T>(string url)
         {
             using var request = CreateRequest(HttpMethod.Get, url);
-            using var response = await HttpClient.SendAsync(request);
+            using var response = await SendAsync(request);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -48,7 +49,7 @@ namespace GLMS.Web.Services
         protected async Task<T> PostAsync<T>(string url, object value)
         {
             using var request = CreateJsonRequest(HttpMethod.Post, url, value);
-            using var response = await HttpClient.SendAsync(request);
+            using var response = await SendAsync(request);
             await EnsureSuccessAsync(response);
             return (await ReadAsync<T>(response))!;
         }
@@ -58,7 +59,7 @@ namespace GLMS.Web.Services
         protected async Task PostNoResultAsync(string url, object value)
         {
             using var request = CreateJsonRequest(HttpMethod.Post, url, value);
-            using var response = await HttpClient.SendAsync(request);
+            using var response = await SendAsync(request);
             await EnsureSuccessAsync(response);
         }
 
@@ -67,7 +68,7 @@ namespace GLMS.Web.Services
         protected async Task PutAsync(string url, object value)
         {
             using var request = CreateJsonRequest(HttpMethod.Put, url, value);
-            using var response = await HttpClient.SendAsync(request);
+            using var response = await SendAsync(request);
             await EnsureSuccessAsync(response);
         }
 
@@ -76,7 +77,7 @@ namespace GLMS.Web.Services
         protected async Task PatchAsync(string url, object value)
         {
             using var request = CreateJsonRequest(HttpMethod.Patch, url, value);
-            using var response = await HttpClient.SendAsync(request);
+            using var response = await SendAsync(request);
             await EnsureSuccessAsync(response);
         }
 
@@ -85,7 +86,7 @@ namespace GLMS.Web.Services
         protected async Task DeleteAsync(string url)
         {
             using var request = CreateRequest(HttpMethod.Delete, url);
-            using var response = await HttpClient.SendAsync(request);
+            using var response = await SendAsync(request);
             await EnsureSuccessAsync(response);
         }
 
@@ -108,7 +109,7 @@ namespace GLMS.Web.Services
             }
 
             var message = await ReadErrorMessageAsync(response);
-            throw new InvalidOperationException(message);
+            throw new ApiClientException((int)response.StatusCode, message);
         }
 
         //..............................................................................//
@@ -136,6 +137,28 @@ namespace GLMS.Web.Services
 
         //..............................................................................//
 
+        protected async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request)
+        {
+            try
+            {
+                return await HttpClient.SendAsync(request);
+            }
+            catch (HttpRequestException ex) when (ex.InnerException is SocketException)
+            {
+                throw new ApiUnavailableException("The GLMS API is unavailable. Please make sure the API project or Docker API service is running.", ex);
+            }
+            catch (TaskCanceledException ex)
+            {
+                throw new ApiUnavailableException("The GLMS API did not respond in time. Please try again.", ex);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new ApiUnavailableException("The GLMS API could not be reached. Please check the API base URL configuration.", ex);
+            }
+        }
+
+        //..............................................................................//
+
         private void AddBearerToken(HttpRequestMessage request)
         {
             var token = _httpContextAccessor.HttpContext?.User.FindFirst("ApiToken")?.Value;
@@ -149,7 +172,13 @@ namespace GLMS.Web.Services
 
         private static async Task<string> ReadErrorMessageAsync(HttpResponseMessage response)
         {
-            var fallback = $"API request failed with status code {(int)response.StatusCode}.";
+            var fallback = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Unauthorized => "Your session has expired. Please log in again.",
+                System.Net.HttpStatusCode.Forbidden => "Your account does not have permission to perform this action.",
+                System.Net.HttpStatusCode.NotFound => "The requested record could not be found.",
+                _ => $"API request failed with status code {(int)response.StatusCode}."
+            };
             var content = await response.Content.ReadAsStringAsync();
             if (string.IsNullOrWhiteSpace(content))
             {
@@ -177,6 +206,28 @@ namespace GLMS.Web.Services
         private class ApiErrorResponse
         {
             public List<string> Errors { get; set; } = new();
+        }
+    }
+
+    public class ApiClientException : InvalidOperationException
+    {
+        public ApiClientException(int statusCode, string message)
+            : base(message)
+        {
+            StatusCode = statusCode;
+        }
+
+        public int StatusCode { get; }
+        public bool IsUnauthorized => StatusCode == StatusCodes.Status401Unauthorized;
+        public bool IsForbidden => StatusCode == StatusCodes.Status403Forbidden;
+        public bool IsNotFound => StatusCode == StatusCodes.Status404NotFound;
+    }
+
+    public class ApiUnavailableException : InvalidOperationException
+    {
+        public ApiUnavailableException(string message, Exception innerException)
+            : base(message, innerException)
+        {
         }
     }
 }

@@ -1,4 +1,4 @@
-using GLMS.Web.Models;
+using GLMS.Web.ViewModels.Api;
 
 //ST10445500 - PROG7311 - GLMS POE
 //ContractService
@@ -10,12 +10,13 @@ namespace GLMS.Web.Services
     //manages Contracts by calling the GLMS API
     public interface IContractService
     {
-        Task<List<Contract>> GetAllAsync();
-        Task<Contract?> GetByIdAsync(int id);
-        Task<Contract?> GetDetailsAsync(int id);
-        Task<List<Contract>> FilterAsync(int? statusId = null, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null);
-        Task<Contract> CreateAsync(Contract contract);
-        Task UpdateAsync(Contract contract);
+        Task<List<ContractListDto>> GetAllAsync();
+        Task<ContractDetailDto?> GetByIdAsync(int id);
+        Task<ContractDetailDto?> GetDetailsAsync(int id);
+        Task<List<ContractListDto>> FilterAsync(int? statusId = null, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null);
+        Task<ContractDetailDto> CreateAsync(CreateContractDto contract);
+        Task UpdateAsync(UpdateContractDto contract);
+        Task UpdateStatusAsync(int id, int contractStatusId);
         Task DeleteAsync(int id);
     }
 
@@ -30,28 +31,28 @@ namespace GLMS.Web.Services
 
         //..............................................................................//
 
-        public Task<List<Contract>> GetAllAsync()
+        public Task<List<ContractListDto>> GetAllAsync()
         {
             return FilterAsync();
         }
 
         //..............................................................................//
 
-        public Task<Contract?> GetByIdAsync(int id)
+        public Task<ContractDetailDto?> GetByIdAsync(int id)
         {
-            return GetAsync<Contract>($"api/contracts/{id}");
+            return GetAsync<ContractDetailDto>($"api/contracts/{id}");
         }
 
         //..............................................................................//
 
-        public Task<Contract?> GetDetailsAsync(int id)
+        public Task<ContractDetailDto?> GetDetailsAsync(int id)
         {
             return GetByIdAsync(id);
         }
 
         //..............................................................................//
 
-        public async Task<List<Contract>> FilterAsync(int? statusId = null, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null)
+        public async Task<List<ContractListDto>> FilterAsync(int? statusId = null, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null)
         {
             var query = new List<string>();
 
@@ -68,21 +69,28 @@ namespace GLMS.Web.Services
                 query.Add($"clientId={clientId.Value}");
 
             var url = query.Count == 0 ? "api/contracts" : $"api/contracts?{string.Join("&", query)}";
-            return await GetAsync<List<Contract>>(url) ?? new List<Contract>();
+            return await GetAsync<List<ContractListDto>>(url) ?? new List<ContractListDto>();
         }
 
         //..............................................................................//
 
-        public Task<Contract> CreateAsync(Contract contract)
+        public Task<ContractDetailDto> CreateAsync(CreateContractDto contract)
         {
-            return PostAsync<Contract>("api/contracts", contract);
+            return PostAsync<ContractDetailDto>("api/contracts", contract);
         }
 
         //..............................................................................//
 
-        public Task UpdateAsync(Contract contract)
+        public Task UpdateAsync(UpdateContractDto contract)
         {
             return PutAsync($"api/contracts/{contract.ContractId}", contract);
+        }
+
+        //..............................................................................//
+
+        public Task UpdateStatusAsync(int id, int contractStatusId)
+        {
+            return PatchAsync($"api/contracts/{id}/status", new UpdateContractStatusDto { ContractStatusId = contractStatusId });
         }
 
         //..............................................................................//

@@ -32,31 +32,43 @@ namespace GLMS.Web.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var clients = await _clientService.GetAllAsync();
-            var contracts = await _contractService.GetAllAsync();
-            var serviceRequests = await _serviceRequestService.GetAllAsync();
-
-            var vm = new DashboardViewModel
+            try
             {
-                TotalClients = clients.Count,
-                TotalContracts = contracts.Count,
-                ActiveContracts = contracts.Count(c => string.Equals(c.ContractStatus?.StatusName, "Active", StringComparison.OrdinalIgnoreCase)),
-                TotalServiceRequests = serviceRequests.Count,
-                RecentServiceRequests = serviceRequests
-                    .OrderByDescending(sr => sr.RequestedAt)
-                    .Take(5)
-                    .Select(sr => new RecentServiceRequestItemViewModel
-                    {
-                        ServiceRequestId = sr.ServiceRequestId,
-                        ContractId = sr.ContractId,
-                        ContractTitle = sr.Contract?.Title ?? "-",
-                        StatusName = sr.ServiceRequestStatus?.StatusName ?? "Unknown",
-                        RequestedAt = sr.RequestedAt
-                    })
-                    .ToList()
-            };
+                var clients = await _clientService.GetAllAsync();
+                var contracts = await _contractService.GetAllAsync();
+                var serviceRequests = await _serviceRequestService.GetAllAsync();
 
-            return View(vm);
+                var vm = new DashboardViewModel
+                {
+                    TotalClients = clients.Count,
+                    TotalContracts = contracts.Count,
+                    ActiveContracts = contracts.Count(c => string.Equals(c.ContractStatusName, "Active", StringComparison.OrdinalIgnoreCase)),
+                    ExpiredOrOnHoldContracts = contracts.Count(c =>
+                        string.Equals(c.ContractStatusName, "Expired", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(c.ContractStatusName, "On Hold", StringComparison.OrdinalIgnoreCase)),
+                    TotalServiceRequests = serviceRequests.Count,
+                    PendingServiceRequests = serviceRequests.Count(sr => string.Equals(sr.ServiceRequestStatusName, "Pending", StringComparison.OrdinalIgnoreCase)),
+                    RecentServiceRequests = serviceRequests
+                        .OrderByDescending(sr => sr.RequestedAt)
+                        .Take(5)
+                        .Select(sr => new RecentServiceRequestItemViewModel
+                        {
+                            ServiceRequestId = sr.ServiceRequestId,
+                            ContractId = sr.ContractId,
+                            ContractTitle = sr.ContractTitle,
+                            StatusName = sr.ServiceRequestStatusName,
+                            RequestedAt = sr.RequestedAt
+                        })
+                        .ToList()
+                };
+
+                return View(vm);
+            }
+            catch (ApiUnavailableException ex)
+            {
+                ViewData["ErrorMessage"] = ex.Message;
+                return View(new DashboardViewModel());
+            }
         }
 
         //............................................................................................//

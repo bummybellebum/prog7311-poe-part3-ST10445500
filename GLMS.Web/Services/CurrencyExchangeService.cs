@@ -27,14 +27,14 @@ namespace GLMS.Web.Services
 
         public async Task<IReadOnlyDictionary<string, string>> GetSupportedCurrenciesAsync(CancellationToken cancellationToken = default)
         {
-            return await GetAsync<Dictionary<string, string>>("api/servicerequests/currencies") ?? new Dictionary<string, string>();
+            return await GetAsync<Dictionary<string, string>>("api/service-requests/currencies") ?? new Dictionary<string, string>();
         }
 
         //..............................................................................//
 
         public async Task<decimal> GetRateToZarAsync(string baseCurrencyCode, CancellationToken cancellationToken = default)
         {
-            var result = await GetAsync<ExchangeRateResponse>($"api/servicerequests/exchange-rate?currencyCode={Uri.EscapeDataString(baseCurrencyCode)}");
+            var result = await GetAsync<ExchangeRateResponse>($"api/service-requests/exchange-rate?currencyCode={Uri.EscapeDataString(baseCurrencyCode)}");
             return result?.Rate ?? 0m;
         }
 

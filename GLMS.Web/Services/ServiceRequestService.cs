@@ -1,4 +1,4 @@
-using GLMS.Web.Models;
+using GLMS.Web.ViewModels.Api;
 
 //ST10445500 - PROG7311 - GLMS POE
 //ServiceRequestService
@@ -10,12 +10,13 @@ namespace GLMS.Web.Services
     //manages Service Requests by calling the GLMS API
     public interface IServiceRequestService
     {
-        Task<List<ServiceRequest>> GetAllAsync();
-        Task<ServiceRequest?> GetByIdAsync(int id);
-        Task<ServiceRequest?> GetDetailsAsync(int id);
-        Task<List<ServiceRequest>> GetByContractIdAsync(int contractId);
-        Task<ServiceRequest> CreateAsync(ServiceRequest serviceRequest);
-        Task UpdateAsync(ServiceRequest serviceRequest);
+        Task<List<ServiceRequestListDto>> GetAllAsync(int? contractId = null, int? statusId = null);
+        Task<ServiceRequestDetailDto?> GetByIdAsync(int id);
+        Task<ServiceRequestDetailDto?> GetDetailsAsync(int id);
+        Task<List<ServiceRequestListDto>> GetByContractIdAsync(int contractId);
+        Task<ServiceRequestDetailDto> CreateAsync(CreateServiceRequestDto serviceRequest);
+        Task UpdateAsync(UpdateServiceRequestDto serviceRequest);
+        Task UpdateStatusAsync(int id, int serviceRequestStatusId);
         Task DeleteAsync(int id);
     }
 
@@ -30,51 +31,67 @@ namespace GLMS.Web.Services
 
         //..............................................................................//
 
-        public async Task<List<ServiceRequest>> GetAllAsync()
+        public async Task<List<ServiceRequestListDto>> GetAllAsync(int? contractId = null, int? statusId = null)
         {
-            return await GetAsync<List<ServiceRequest>>("api/servicerequests") ?? new List<ServiceRequest>();
+            var query = new List<string>();
+
+            if (contractId.HasValue)
+                query.Add($"contractId={contractId.Value}");
+
+            if (statusId.HasValue)
+                query.Add($"statusId={statusId.Value}");
+
+            var url = query.Count == 0 ? "api/service-requests" : $"api/service-requests?{string.Join("&", query)}";
+            return await GetAsync<List<ServiceRequestListDto>>(url) ?? new List<ServiceRequestListDto>();
         }
 
         //..............................................................................//
 
-        public Task<ServiceRequest?> GetByIdAsync(int id)
+        public Task<ServiceRequestDetailDto?> GetByIdAsync(int id)
         {
-            return GetAsync<ServiceRequest>($"api/servicerequests/{id}");
+            return GetAsync<ServiceRequestDetailDto>($"api/service-requests/{id}");
         }
 
         //..............................................................................//
 
-        public Task<ServiceRequest?> GetDetailsAsync(int id)
+        public Task<ServiceRequestDetailDto?> GetDetailsAsync(int id)
         {
             return GetByIdAsync(id);
         }
 
         //..............................................................................//
 
-        public async Task<List<ServiceRequest>> GetByContractIdAsync(int contractId)
+        public async Task<List<ServiceRequestListDto>> GetByContractIdAsync(int contractId)
         {
-            return await GetAsync<List<ServiceRequest>>($"api/servicerequests?contractId={contractId}") ?? new List<ServiceRequest>();
+            return await GetAllAsync(contractId);
         }
 
         //..............................................................................//
 
-        public Task<ServiceRequest> CreateAsync(ServiceRequest serviceRequest)
+        public Task<ServiceRequestDetailDto> CreateAsync(CreateServiceRequestDto serviceRequest)
         {
-            return PostAsync<ServiceRequest>("api/servicerequests", serviceRequest);
+            return PostAsync<ServiceRequestDetailDto>("api/service-requests", serviceRequest);
         }
 
         //..............................................................................//
 
-        public Task UpdateAsync(ServiceRequest serviceRequest)
+        public Task UpdateAsync(UpdateServiceRequestDto serviceRequest)
         {
-            return PutAsync($"api/servicerequests/{serviceRequest.ServiceRequestId}", serviceRequest);
+            return PutAsync($"api/service-requests/{serviceRequest.ServiceRequestId}", serviceRequest);
+        }
+
+        //..............................................................................//
+
+        public Task UpdateStatusAsync(int id, int serviceRequestStatusId)
+        {
+            return PatchAsync($"api/service-requests/{id}/status", new UpdateServiceRequestStatusDto { ServiceRequestStatusId = serviceRequestStatusId });
         }
 
         //..............................................................................//
 
         public Task DeleteAsync(int id)
         {
-            return DeleteAsync($"api/servicerequests/{id}");
+            return DeleteAsync($"api/service-requests/{id}");
         }
 
         //..............................................................................//

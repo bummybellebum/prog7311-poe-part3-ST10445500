@@ -1,5 +1,6 @@
 using GLMS.Web.Models;
 using GLMS.Web.Services;
+using GLMS.Web.ViewModels.Api;
 using GLMS.Web.ViewModels.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,27 +13,24 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace GLMS.Web.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = ApplicationRoles.AllRoles)]
     public class ContractsController : Controller
     {
         private readonly IContractService _contractService;
         private readonly IClientService _clientService;
         private readonly ILookupService _lookupService;
         private readonly IContractDocumentService _contractDocumentService;
-        private readonly ICurrentUserService _currentUserService;
 
         public ContractsController(
             IContractService contractService,
             IClientService clientService,
             ILookupService lookupService,
-            IContractDocumentService contractDocumentService,
-            ICurrentUserService currentUserService)
+            IContractDocumentService contractDocumentService)
         {
             _contractService = contractService;
             _clientService = clientService;
             _lookupService = lookupService;
             _contractDocumentService = contractDocumentService;
-            _currentUserService = currentUserService;
         }
 
         //........................................................................................//
@@ -57,7 +55,9 @@ namespace GLMS.Web.Controllers
                 return NotFound();
             }
 
-            var documents = await _contractDocumentService.GetByContractIdAsync(id);
+            var documents = contract.Documents.Any()
+                ? contract.Documents
+                : await _contractDocumentService.GetByContractIdAsync(id);
             var current = documents.FirstOrDefault(d => d.IsCurrent);
 
             var vm = new ContractDetailsViewModel
@@ -68,12 +68,19 @@ namespace GLMS.Web.Controllers
                 ServiceRequests = contract.ServiceRequests.OrderByDescending(sr => sr.RequestedAt).ToList()
             };
 
+            var statuses = await _lookupService.GetContractStatusesAsync();
+            vm.StatusOptions = statuses
+                .OrderBy(s => s.Name)
+                .Select(s => new SelectListItem(s.Name, s.Id.ToString(), s.Id == contract.ContractStatusId))
+                .ToList();
+
             ViewData["UploadModel"] = new ContractDocumentUploadViewModel { ContractId = id };
             return View(vm);
         }
 
         //........................................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public async Task<IActionResult> Create()
         {
             var vm = new ContractFormViewModel
@@ -90,6 +97,7 @@ namespace GLMS.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public async Task<IActionResult> Create(ContractFormViewModel vm)
         {
             if (vm.SignedAgreementFile != null && vm.SignedAgreementFile.Length > 0)
@@ -108,13 +116,7 @@ namespace GLMS.Web.Controllers
 
             try
             {
-                var userId = _currentUserService.UserId;
-                if (string.IsNullOrWhiteSpace(userId))
-                {
-                    return Forbid();
-                }
-
-                var contract = new Contract
+                var contract = new CreateContractDto
                 {
                     ClientId = vm.ClientId,
                     Title = vm.Title,
@@ -122,15 +124,14 @@ namespace GLMS.Web.Controllers
                     EndDate = vm.EndDate,
                     ContractStatusId = vm.ContractStatusId,
                     ServiceLevel = vm.ServiceLevel,
-                    Notes = vm.Notes,
-                    CreatedByUserId = userId
+                    Notes = vm.Notes
                 };
 
-                await _contractService.CreateAsync(contract);
+                var created = await _contractService.CreateAsync(contract);
 
                 if (vm.SignedAgreementFile != null && vm.SignedAgreementFile.Length > 0)
                 {
-                    await _contractDocumentService.UploadSignedAgreementAsync(contract.ContractId, vm.SignedAgreementFile);
+                    await _contractDocumentService.UploadSignedAgreementAsync(created.ContractId, vm.SignedAgreementFile);
                     TempData["SuccessMessage"] = "Contract created successfully and signed agreement uploaded.";
                 }
                 else
@@ -150,6 +151,7 @@ namespace GLMS.Web.Controllers
 
         //........................................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public async Task<IActionResult> Edit(int id)
         {
             var contract = await _contractService.GetByIdAsync(id);
@@ -178,6 +180,7 @@ namespace GLMS.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public async Task<IActionResult> Edit(int id, ContractFormViewModel vm)
         {
             if (id != vm.ContractId)
@@ -193,21 +196,27 @@ namespace GLMS.Web.Controllers
 
             try
             {
-                var existing = await _contractService.GetByIdAsync(id);
+                var existing = await _contractService.GetDetailsAsync(id);
                 if (existing == null)
                 {
                     return NotFound();
                 }
 
-                existing.ClientId = vm.ClientId;
-                existing.Title = vm.Title;
-                existing.StartDate = vm.StartDate;
-                existing.EndDate = vm.EndDate;
-                existing.ContractStatusId = vm.ContractStatusId;
-                existing.ServiceLevel = vm.ServiceLevel;
-                existing.Notes = vm.Notes;
+                var dto = new UpdateContractDto
+                {
+                    ContractId = id,
+                    ClientId = vm.ClientId,
+                    Title = vm.Title,
+                    StartDate = vm.StartDate,
+                    EndDate = vm.EndDate,
+                    ContractStatusId = vm.ContractStatusId,
+                    ServiceLevel = vm.ServiceLevel,
+                    Notes = vm.Notes,
+                    CreatedByUserId = existing.CreatedByUserId,
+                    CreatedAt = existing.CreatedAt
+                };
 
-                await _contractService.UpdateAsync(existing);
+                await _contractService.UpdateAsync(dto);
                 TempData["SuccessMessage"] = "Contract updated successfully.";
                 return RedirectToAction(nameof(Index));
             }
@@ -221,6 +230,7 @@ namespace GLMS.Web.Controllers
 
         //........................................................................................//
 
+        [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> Delete(int id)
         {
             var contract = await _contractService.GetDetailsAsync(id);
@@ -236,6 +246,7 @@ namespace GLMS.Web.Controllers
 
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             try
@@ -255,6 +266,7 @@ namespace GLMS.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public async Task<IActionResult> UploadSignedAgreement(ContractDocumentUploadViewModel vm)
         {
             var contract = await _contractService.GetByIdAsync(vm.ContractId);
@@ -290,6 +302,26 @@ namespace GLMS.Web.Controllers
 
         //........................................................................................//
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
+        public async Task<IActionResult> UpdateStatus(int id, int contractStatusId)
+        {
+            try
+            {
+                await _contractService.UpdateStatusAsync(id, contractStatusId);
+                TempData["SuccessMessage"] = "Contract status updated successfully.";
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is KeyNotFoundException)
+            {
+                TempData["ErrorMessage"] = ex.Message;
+            }
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        //........................................................................................//
+
         [HttpGet]
         public async Task<IActionResult> DownloadAgreement(int id)
         {
@@ -317,8 +349,8 @@ namespace GLMS.Web.Controllers
             var clients = await _clientService.GetAllAsync();
 
             vm.StatusOptions = statuses
-                .OrderBy(s => s.StatusName)
-                .Select(s => new SelectListItem(s.StatusName, s.ContractStatusId.ToString()))
+                .OrderBy(s => s.Name)
+                .Select(s => new SelectListItem(s.Name, s.Id.ToString()))
                 .ToList();
 
             vm.ClientOptions = clients
@@ -335,8 +367,8 @@ namespace GLMS.Web.Controllers
             var clients = await _clientService.GetAllAsync();
 
             vm.StatusOptions = statuses
-                .OrderBy(s => s.StatusName)
-                .Select(s => new SelectListItem(s.StatusName, s.ContractStatusId.ToString()))
+                .OrderBy(s => s.Name)
+                .Select(s => new SelectListItem(s.Name, s.Id.ToString()))
                 .ToList();
 
             vm.ClientOptions = clients

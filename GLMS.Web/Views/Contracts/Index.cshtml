@@ -1,14 +1,22 @@
 @model GLMS.Web.ViewModels.Contracts.ContractFilterViewModel
 @{
     ViewData["Title"] = "Contracts";
+    var canManageContracts = User.IsInRole(ApplicationRoles.Admin) || User.IsInRole(ApplicationRoles.ContractManager);
+    var canCreateRequests = User.IsInRole(ApplicationRoles.Admin) || User.IsInRole(ApplicationRoles.LogisticsManager);
+    var canDeleteContracts = User.IsInRole(ApplicationRoles.Admin);
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="content-header">
     <div>
         <h1 class="h3 mb-1">Contracts</h1>
         <p class="text-muted mb-0">Search and manage contract lifecycle records.</p>
     </div>
-    <a asp-action="Create" class="btn btn-primary">Add Contract</a>
+    <div class="content-header-actions">
+        @if (canManageContracts)
+        {
+            <a asp-action="Create" class="btn btn-primary">Add Contract</a>
+        }
+    </div>
 </div>
 
 @if (TempData["SuccessMessage"] is string successMessage)
@@ -20,8 +28,7 @@
     <div class="alert alert-danger">@errorMessage</div>
 }
 
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-body">
+<section class="data-panel filter-panel mb-3">
         <form method="get" class="row g-3 align-items-end">
             <div class="col-md-3">
                 <label asp-for="StatusId" class="form-label">Status</label>
@@ -48,20 +55,18 @@
                 <a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
             </div>
         </form>
-    </div>
-</div>
+</section>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
+<section class="data-panel">
         @if (!Model.Contracts.Any())
         {
-            <div class="p-4 text-center text-muted">No contracts match the selected filters.</div>
+            <div class="empty-state">No contracts match the selected filters.</div>
         }
         else
         {
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
                             <th>Title</th>
                             <th>Client</th>
@@ -77,18 +82,27 @@
                         {
                             <tr>
                                 <td>@contract.Title</td>
-                                <td>@(contract.Client?.CompanyName ?? "-")</td>
-                                <td>@await Html.PartialAsync("_StatusBadge", contract.ContractStatus?.StatusName ?? "Unknown")</td>
+                                <td>@contract.ClientName</td>
+                                <td>@await Html.PartialAsync("_StatusBadge", contract.ContractStatusName)</td>
                                 <td>@contract.StartDate.ToString("yyyy-MM-dd")</td>
                                 <td>@contract.EndDate.ToString("yyyy-MM-dd")</td>
                                 <td class="text-center">
                                     <a asp-controller="ServiceRequests" asp-action="Index" asp-route-contractId="@contract.ContractId" class="btn btn-sm btn-outline-secondary">View</a>
                                 </td>
                                 <td class="text-end">
-                                    <a asp-controller="ServiceRequests" asp-action="Create" asp-route-contractId="@contract.ContractId" class="btn btn-sm btn-success">+ Request</a>
+                                    @if (canCreateRequests && string.Equals(contract.ContractStatusName, "Active", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <a asp-controller="ServiceRequests" asp-action="Create" asp-route-contractId="@contract.ContractId" class="btn btn-sm btn-success">+ Request</a>
+                                    }
                                     <a asp-action="Details" asp-route-id="@contract.ContractId" class="btn btn-sm btn-outline-secondary">Details</a>
-                                    <a asp-action="Edit" asp-route-id="@contract.ContractId" class="btn btn-sm btn-outline-primary">Edit</a>
-                                    <a asp-action="Delete" asp-route-id="@contract.ContractId" class="btn btn-sm btn-outline-danger">Delete</a>
+                                    @if (canManageContracts)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@contract.ContractId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    }
+                                    @if (canDeleteContracts)
+                                    {
+                                        <a asp-action="Delete" asp-route-id="@contract.ContractId" class="btn btn-sm btn-outline-danger">Delete</a>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -96,5 +110,4 @@
                 </table>
             </div>
         }
-    </div>
-</div>
+</section>

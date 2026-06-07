@@ -3,12 +3,14 @@
     ViewData["Title"] = "Create Client";
 }
 
-<div class="mb-3">
-    <h1 class="h3 mb-1">Create Client</h1>
-    <p class="text-muted mb-0">Add a new client organization to GLMS.Web.</p>
+<div class="content-header">
+    <div>
+        <h1 class="h3 mb-1">Create Client</h1>
+        <p class="text-muted mb-0">Add a new client organization to GLMS.Web.</p>
+    </div>
 </div>
 
-<div class="card shadow-sm border-0">
+<div class="form-panel">
     <div class="card-body">
         <form asp-action="Create" method="post" novalidate>
             <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>

@@ -1,4 +1,4 @@
-@model GLMS.Web.Models.ServiceRequest
+@model GLMS.Web.ViewModels.Api.ServiceRequestDetailDto
 @{
     ViewData["Title"] = "Delete Service Request";
 }
@@ -16,16 +16,16 @@
 
         <dl class="row mb-0">
             <dt class="col-sm-3">Contract</dt>
-            <dd class="col-sm-9">@(Model.Contract?.Title ?? "-")</dd>
+            <dd class="col-sm-9">@Model.ContractTitle</dd>
 
             <dt class="col-sm-3">Status</dt>
-            <dd class="col-sm-9">@await Html.PartialAsync("_StatusBadge", Model.ServiceRequestStatus?.StatusName ?? "Unknown")</dd>
+            <dd class="col-sm-9">@await Html.PartialAsync("_StatusBadge", Model.ServiceRequestStatusName)</dd>
 
             <dt class="col-sm-3">ZAR Amount</dt>
             <dd class="col-sm-9">@Model.AmountZAR.ToString("N2")</dd>
         </dl>
 
-        <form asp-action="Delete" method="post" class="mt-4 d-flex gap-2">
+        <form asp-action="Delete" method="post" class="mt-4 d-flex gap-2" onsubmit="return confirm('Delete this service request?');">
             <input type="hidden" asp-for="ServiceRequestId" />
             <button type="submit" class="btn btn-danger">Delete Request</button>
             <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>

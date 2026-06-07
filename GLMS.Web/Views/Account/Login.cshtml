@@ -3,41 +3,104 @@
     ViewData["Title"] = "Login";
 }
 
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <div class="mb-3 text-center">
-            <h1 class="h3 mb-1">GLMS Login</h1>
-            <p class="text-muted mb-0">Sign in with your GLMS account.</p>
+<div class="login-shell">
+    <section class="login-brand-panel" aria-label="GLMS overview">
+        <div class="login-map" aria-hidden="true">
+            <span class="map-pin pin-one"></span>
+            <span class="map-pin pin-two"></span>
+            <span class="map-pin pin-three"></span>
+            <span class="map-pin pin-four"></span>
+            <span class="route-line route-one"></span>
+            <span class="route-line route-two"></span>
         </div>
 
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <form asp-action="Login" method="post" novalidate>
-                    <input type="hidden" asp-for="ReturnUrl" />
-                    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        <div class="login-brand login-brand-lockup">
+            <span class="login-globe-mark" aria-hidden="true">
+                <svg viewBox="0 0 64 64" focusable="false">
+                    <circle cx="32" cy="32" r="25" />
+                    <path d="M7 32h50" />
+                    <path d="M32 7c8 7 12 15 12 25S40 50 32 57" />
+                    <path d="M32 7C24 14 20 22 20 32s4 18 12 25" />
+                    <path d="M13 20c7 4 14 6 19 6s12-2 19-6" />
+                    <path d="M13 44c7-4 14-6 19-6s12 2 19 6" />
+                </svg>
+            </span>
+            <span class="login-brand-copy">
+                <span class="login-brand-title">GLMS</span>
+                <span class="login-brand-subtitle">Global Logistics<br />Management System</span>
+                <span class="login-brand-rule" aria-hidden="true"></span>
+            </span>
+        </div>
 
-                    <div class="mb-3">
-                        <label asp-for="Email" class="form-label"></label>
-                        <input asp-for="Email" class="form-control" autocomplete="username" />
-                        <span asp-validation-for="Email" class="text-danger"></span>
-                    </div>
+        <div class="login-secure-note">
+            <span class="login-secure-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 3.5 18 6v5.2c0 3.8-2.4 6.9-6 8.3-3.6-1.4-6-4.5-6-8.3V6l6-2.5Z" />
+                    <path d="m9.4 12 1.7 1.7 3.8-4" />
+                </svg>
+            </span>
+            Secure. Connected. Delivered.
+        </div>
+    </section>
 
-                    <div class="mb-3">
-                        <label asp-for="Password" class="form-label"></label>
-                        <input asp-for="Password" class="form-control" autocomplete="current-password" />
-                        <span asp-validation-for="Password" class="text-danger"></span>
-                    </div>
+    <section class="login-form-panel" aria-labelledby="login-heading">
+        <div class="login-form-header">
+            <h2 id="login-heading">Welcome back</h2>
+            <p>Sign in to your GLMS account.</p>
+        </div>
 
-                    <div class="mb-3 form-check">
-                        <input asp-for="RememberMe" class="form-check-input" />
-                        <label asp-for="RememberMe" class="form-check-label"></label>
-                    </div>
+        <form asp-action="Login" method="post" class="login-form" novalidate>
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger login-alert"></div>
 
-                    <button type="submit" class="btn btn-primary w-100">Login</button>
-                </form>
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label">Email address</label>
+                <div class="login-input-wrap">
+                    <span class="login-input-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M4.5 6.5h15v11h-15z" />
+                            <path d="m5 7 7 6 7-6" />
+                        </svg>
+                    </span>
+                    <input asp-for="Email" class="form-control form-control-lg" autocomplete="username" placeholder="you@company.com" />
+                </div>
+                <span asp-validation-for="Email" class="text-danger small"></span>
             </div>
-        </div>
-    </div>
+
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                <div class="login-input-wrap">
+                    <span class="login-input-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M7 10V8a5 5 0 0 1 10 0v2" />
+                            <path d="M6 10h12v9H6z" />
+                            <path d="M12 14v2" />
+                        </svg>
+                    </span>
+                    <input asp-for="Password" class="form-control form-control-lg" autocomplete="current-password" placeholder="Enter your password" />
+                    <span class="login-input-action" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M3.5 12s3-5 8.5-5 8.5 5 8.5 5-3 5-8.5 5-8.5-5-8.5-5Z" />
+                            <circle cx="12" cy="12" r="2.2" />
+                        </svg>
+                    </span>
+                </div>
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            </div>
+
+            <div class="login-form-row">
+                <div class="form-check">
+                    <input asp-for="RememberMe" class="form-check-input" />
+                    <label asp-for="RememberMe" class="form-check-label"></label>
+                </div>
+                <span class="login-forgot">Forgot password?</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100">Sign in</button>
+        </form>
+
+        <div class="login-form-footer">&copy; @DateTime.UtcNow.Year GLMS. All rights reserved.</div>
+    </section>
 </div>
 
 @section Scripts {

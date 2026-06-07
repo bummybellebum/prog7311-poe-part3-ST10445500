@@ -1,4 +1,4 @@
-using GLMS.Web.Models;
+using GLMS.Web.ViewModels.Api;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 //ST10445500 - PROG7311 - GLMS POE
@@ -16,7 +16,7 @@ namespace GLMS.Web.ViewModels.ServiceRequests
         public List<SelectListItem> ContractOptions { get; set; } = new();
         public List<SelectListItem> StatusOptions { get; set; } = new();
 
-        public List<ServiceRequest> Requests { get; set; } = new();
+        public List<ServiceRequestListDto> Requests { get; set; } = new();
     }
 }
 

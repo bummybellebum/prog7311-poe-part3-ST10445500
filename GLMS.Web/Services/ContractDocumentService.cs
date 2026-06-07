@@ -1,4 +1,4 @@
-using GLMS.Web.Models;
+using GLMS.Web.ViewModels.Api;
 
 //ST10445500 - PROG7311 - GLMS POE
 //ContractDocumentService
@@ -10,13 +10,13 @@ namespace GLMS.Web.Services
     //manages Contract Documents by calling the GLMS API
     public interface IContractDocumentService
     {
-        Task<ContractDocument?> GetByIdAsync(int id);
-        Task<List<ContractDocument>> GetByContractIdAsync(int contractId);
-        Task<ContractDocument?> GetCurrentByContractIdAsync(int contractId);
-        Task<ContractDocument> CreateAsync(ContractDocument document);
-        Task UpdateAsync(ContractDocument document);
+        Task<ContractDocumentDto?> GetByIdAsync(int id);
+        Task<List<ContractDocumentDto>> GetByContractIdAsync(int contractId);
+        Task<ContractDocumentDto?> GetCurrentByContractIdAsync(int contractId);
+        Task<ContractDocumentDto> CreateAsync(ContractDocumentDto document);
+        Task UpdateAsync(ContractDocumentDto document);
         Task DeleteAsync(int id);
-        Task<ContractDocument> UploadSignedAgreementAsync(int contractId, IFormFile file);
+        Task<ContractDocumentDto> UploadSignedAgreementAsync(int contractId, IFormFile file);
         Task<DownloadedFile?> DownloadAgreementAsync(int documentId);
     }
 
@@ -31,21 +31,21 @@ namespace GLMS.Web.Services
 
         //..............................................................................//
 
-        public Task<ContractDocument?> GetByIdAsync(int id)
+        public Task<ContractDocumentDto?> GetByIdAsync(int id)
         {
-            return GetAsync<ContractDocument>($"api/contracts/documents/{id}");
+            return GetAsync<ContractDocumentDto>($"api/contracts/documents/{id}");
         }
 
         //..............................................................................//
 
-        public async Task<List<ContractDocument>> GetByContractIdAsync(int contractId)
+        public async Task<List<ContractDocumentDto>> GetByContractIdAsync(int contractId)
         {
-            return await GetAsync<List<ContractDocument>>($"api/contracts/{contractId}/documents") ?? new List<ContractDocument>();
+            return await GetAsync<List<ContractDocumentDto>>($"api/contracts/{contractId}/documents") ?? new List<ContractDocumentDto>();
         }
 
         //..............................................................................//
 
-        public async Task<ContractDocument?> GetCurrentByContractIdAsync(int contractId)
+        public async Task<ContractDocumentDto?> GetCurrentByContractIdAsync(int contractId)
         {
             var documents = await GetByContractIdAsync(contractId);
             return documents.FirstOrDefault(d => d.IsCurrent);
@@ -53,14 +53,14 @@ namespace GLMS.Web.Services
 
         //..............................................................................//
 
-        public Task<ContractDocument> CreateAsync(ContractDocument document)
+        public Task<ContractDocumentDto> CreateAsync(ContractDocumentDto document)
         {
-            return PostAsync<ContractDocument>($"api/contracts/{document.ContractId}/documents", document);
+            return PostAsync<ContractDocumentDto>($"api/contracts/{document.ContractId}/documents", document);
         }
 
         //..............................................................................//
 
-        public Task UpdateAsync(ContractDocument document)
+        public Task UpdateAsync(ContractDocumentDto document)
         {
             return PutAsync($"api/contracts/documents/{document.ContractDocumentId}", document);
         }
@@ -74,7 +74,7 @@ namespace GLMS.Web.Services
 
         //..............................................................................//
 
-        public async Task<ContractDocument> UploadSignedAgreementAsync(int contractId, IFormFile file)
+        public async Task<ContractDocumentDto> UploadSignedAgreementAsync(int contractId, IFormFile file)
         {
             using var content = new MultipartFormDataContent();
             await using var stream = file.OpenReadStream();
@@ -84,10 +84,10 @@ namespace GLMS.Web.Services
 
             using var request = CreateRequest(HttpMethod.Post, $"api/contracts/{contractId}/signed-agreement");
             request.Content = content;
-            using var response = await HttpClient.SendAsync(request);
+            using var response = await SendAsync(request);
             await EnsureSuccessAsync(response);
 
-            return (await ReadAsync<ContractDocument>(response))!;
+            return (await ReadAsync<ContractDocumentDto>(response))!;
         }
 
         //..............................................................................//
@@ -95,7 +95,7 @@ namespace GLMS.Web.Services
         public async Task<DownloadedFile?> DownloadAgreementAsync(int documentId)
         {
             using var request = CreateRequest(HttpMethod.Get, $"api/contracts/documents/{documentId}/download");
-            using var response = await HttpClient.SendAsync(request);
+            using var response = await SendAsync(request);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {

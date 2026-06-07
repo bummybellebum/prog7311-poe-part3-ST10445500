@@ -1,6 +1,8 @@
 @model GLMS.Web.ViewModels.Contracts.ContractDetailsViewModel
 @{
     ViewData["Title"] = "Contract Details";
+    var canManageContracts = User.IsInRole(ApplicationRoles.Admin) || User.IsInRole(ApplicationRoles.ContractManager);
+    var canCreateRequests = User.IsInRole(ApplicationRoles.Admin) || User.IsInRole(ApplicationRoles.LogisticsManager);
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -9,7 +11,10 @@
         <p class="text-muted mb-0">Contract details, signed agreement, and related service requests.</p>
     </div>
     <div class="d-flex gap-2">
-        <a asp-action="Edit" asp-route-id="@Model.Contract.ContractId" class="btn btn-primary">Edit</a>
+        @if (canManageContracts)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Contract.ContractId" class="btn btn-primary">Edit</a>
+        }
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
 </div>
@@ -30,8 +35,8 @@
                 <h2 class="h5 mb-3">Contract Information</h2>
                 <div class="row g-2">
                     <div class="col-md-6"><strong>Title:</strong> @Model.Contract.Title</div>
-                    <div class="col-md-6"><strong>Client:</strong> @(Model.Contract.Client?.CompanyName ?? "-")</div>
-                    <div class="col-md-4"><strong>Status:</strong> @await Html.PartialAsync("_StatusBadge", Model.Contract.ContractStatus?.StatusName ?? "Unknown")</div>
+                    <div class="col-md-6"><strong>Client:</strong> @Model.Contract.ClientName</div>
+                    <div class="col-md-4"><strong>Status:</strong> @await Html.PartialAsync("_StatusBadge", Model.Contract.ContractStatusName)</div>
                     <div class="col-md-4"><strong>Service Level:</strong> @(Model.Contract.ServiceLevel ?? "-")</div>
                     <div class="col-md-4"><strong>Contract ID:</strong> @Model.Contract.ContractId</div>
                     <div class="col-md-4"><strong>Start Date:</strong> @Model.Contract.StartDate.ToString("yyyy-MM-dd")</div>
@@ -39,6 +44,20 @@
                     <div class="col-md-4"><strong>Created:</strong> @Model.Contract.CreatedAt.ToString("yyyy-MM-dd")</div>
                 </div>
                 <hr />
+                @if (canManageContracts)
+                {
+                    <form asp-action="UpdateStatus" asp-route-id="@Model.Contract.ContractId" method="post" class="row g-2 align-items-end mb-3" onsubmit="return confirm('Update this contract status?');">
+                        @Html.AntiForgeryToken()
+                        <div class="col-sm-8">
+                            <label class="form-label">Update Status</label>
+                            <select name="contractStatusId" asp-items="Model.StatusOptions" class="form-select"></select>
+                        </div>
+                        <div class="col-sm-4">
+                            <button type="submit" class="btn btn-outline-primary w-100">Save Status</button>
+                        </div>
+                    </form>
+                    <hr />
+                }
                 <div>
                     <strong>Notes</strong>
                     <p class="mb-0 mt-1 text-muted">@(string.IsNullOrWhiteSpace(Model.Contract.Notes) ? "No notes recorded." : Model.Contract.Notes)</p>
@@ -67,15 +86,22 @@
 
                 <hr />
 
-                <form asp-action="UploadSignedAgreement" method="post" enctype="multipart/form-data">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="ContractId" value="@Model.Contract.ContractId" />
-                    <div class="mb-2">
-                        <label class="form-label">Upload Signed Agreement (PDF)</label>
-                        <input type="file" name="File" accept=".pdf,application/pdf" class="form-control" required />
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-sm">Upload PDF</button>
-                </form>
+                @if (canManageContracts)
+                {
+                    <form asp-action="UploadSignedAgreement" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="ContractId" value="@Model.Contract.ContractId" />
+                        <div class="mb-2">
+                            <label class="form-label">Upload Signed Agreement (PDF)</label>
+                            <input type="file" name="File" accept=".pdf,application/pdf" class="form-control" required />
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Upload PDF</button>
+                    </form>
+                }
+                else
+                {
+                    <div class="small text-muted">Only contract managers and admins can upload signed agreements.</div>
+                }
             </div>
         </div>
 
@@ -107,7 +133,10 @@
     <div class="card-body p-0">
         <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
             <h2 class="h5 mb-0">Related Service Requests</h2>
-            <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-sm btn-outline-primary">Create Request</a>
+            @if (canCreateRequests && string.Equals(Model.Contract.ContractStatusName, "Active", StringComparison.OrdinalIgnoreCase))
+            {
+                <a asp-controller="ServiceRequests" asp-action="Create" asp-route-contractId="@Model.Contract.ContractId" class="btn btn-sm btn-outline-primary">Create Request</a>
+            }
         </div>
 
         @if (!Model.ServiceRequests.Any())
@@ -131,7 +160,7 @@
                         @foreach (var sr in Model.ServiceRequests)
                         {
                             <tr>
-                                <td>@await Html.PartialAsync("_StatusBadge", sr.ServiceRequestStatus?.StatusName ?? "Unknown")</td>
+                                <td>@await Html.PartialAsync("_StatusBadge", sr.ServiceRequestStatusName)</td>
                                 <td>@sr.AmountOriginal.ToString("N2") @sr.OriginalCurrencyCode</td>
                                 <td>@sr.AmountZAR.ToString("N2")</td>
                                 <td>@sr.RequestedAt.ToString("yyyy-MM-dd")</td>

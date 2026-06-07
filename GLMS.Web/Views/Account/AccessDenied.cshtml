@@ -2,10 +2,11 @@
     ViewData["Title"] = "Access Denied";
 }
 
-<div class="card shadow-sm border-0">
-    <div class="card-body text-center py-5">
+<section class="data-panel">
+    <div class="p-5 text-center">
+        <div class="metric-icon warn mx-auto">403</div>
         <h1 class="h3 mb-2">Access Denied</h1>
-        <p class="text-muted mb-4">Your account does not have permission to open this page.</p>
+        <p class="text-muted mb-4">Your account role does not allow this action.</p>
         <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Back to Dashboard</a>
     </div>
-</div>
+</section>

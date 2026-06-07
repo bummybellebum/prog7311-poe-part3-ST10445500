@@ -1,5 +1,6 @@
 using GLMS.Web.Models;
 using GLMS.Web.Services;
+using GLMS.Web.ViewModels.Api;
 using GLMS.Web.ViewModels.Clients;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 //.....................................o0oSTART OF FILEo0o........................................//
 namespace GLMS.Web.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = ApplicationRoles.AllRoles)]
     public class ClientsController : Controller
     {
         private readonly IClientService _clientService;
@@ -24,18 +25,19 @@ namespace GLMS.Web.Controllers
 
         public async Task<IActionResult> Index(string? search)
         {
-            var clients = await _clientService.GetAllAsync();
-
-            if (!string.IsNullOrWhiteSpace(search))
+            try
             {
-                clients = clients
-                    .Where(c => c.CompanyName.Contains(search, StringComparison.OrdinalIgnoreCase)
-                             || c.Email.Contains(search, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-            }
+                var clients = await _clientService.GetAllAsync(search);
 
-            ViewData["Search"] = search;
-            return View(clients.OrderBy(c => c.CompanyName).ToList());
+                ViewData["Search"] = search;
+                return View(clients.OrderBy(c => c.CompanyName).ToList());
+            }
+            catch (ApiUnavailableException ex)
+            {
+                ViewData["Search"] = search;
+                ViewData["ErrorMessage"] = ex.Message;
+                return View(new List<ClientListDto>());
+            }
         }
 
         //........................................................................................//
@@ -48,7 +50,7 @@ namespace GLMS.Web.Controllers
                 return NotFound();
             }
 
-            var activeCount = client.Contracts.Count(c => string.Equals(c.ContractStatus?.StatusName, "Active", StringComparison.OrdinalIgnoreCase));
+            var activeCount = client.Contracts.Count(c => string.Equals(c.ContractStatusName, "Active", StringComparison.OrdinalIgnoreCase));
 
             var vm = new ClientDetailsViewModel
             {
@@ -62,6 +64,7 @@ namespace GLMS.Web.Controllers
 
         //........................................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public IActionResult Create()
         {
             return View(new ClientFormViewModel());
@@ -71,6 +74,7 @@ namespace GLMS.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public async Task<IActionResult> Create(ClientFormViewModel vm)
         {
             if (!ModelState.IsValid)
@@ -80,7 +84,7 @@ namespace GLMS.Web.Controllers
 
             try
             {
-                var client = new Client
+                var client = new CreateClientDto
                 {
                     CompanyName = vm.CompanyName,
                     Email = vm.Email,
@@ -103,6 +107,7 @@ namespace GLMS.Web.Controllers
 
         //........................................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public async Task<IActionResult> Edit(int id)
         {
             var client = await _clientService.GetByIdAsync(id);
@@ -129,6 +134,7 @@ namespace GLMS.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public async Task<IActionResult> Edit(int id, ClientFormViewModel vm)
         {
             if (id != vm.ClientId)
@@ -143,18 +149,16 @@ namespace GLMS.Web.Controllers
 
             try
             {
-                var existing = await _clientService.GetByIdAsync(id);
-                if (existing == null)
+                var existing = new UpdateClientDto
                 {
-                    return NotFound();
-                }
-
-                existing.CompanyName = vm.CompanyName;
-                existing.Email = vm.Email;
-                existing.Phone = vm.Phone;
-                existing.Region = vm.Region;
-                existing.Country = vm.Country;
-                existing.IsActive = vm.IsActive;
+                    ClientId = id,
+                    CompanyName = vm.CompanyName,
+                    Email = vm.Email,
+                    Phone = vm.Phone,
+                    Region = vm.Region,
+                    Country = vm.Country,
+                    IsActive = vm.IsActive
+                };
 
                 await _clientService.UpdateAsync(existing);
                 TempData["SuccessMessage"] = "Client updated successfully.";
@@ -169,6 +173,7 @@ namespace GLMS.Web.Controllers
 
         //........................................................................................//
 
+        [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> Delete(int id)
         {
             var client = await _clientService.GetByIdAsync(id);
@@ -184,6 +189,7 @@ namespace GLMS.Web.Controllers
 
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             try

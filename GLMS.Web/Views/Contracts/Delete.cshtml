@@ -1,4 +1,4 @@
-@model GLMS.Web.Models.Contract
+@model GLMS.Web.ViewModels.Api.ContractDetailDto
 @{
     ViewData["Title"] = "Delete Contract";
 }
@@ -19,13 +19,13 @@
             <dd class="col-sm-9">@Model.Title</dd>
 
             <dt class="col-sm-3">Client</dt>
-            <dd class="col-sm-9">@(Model.Client?.CompanyName ?? "-")</dd>
+            <dd class="col-sm-9">@Model.ClientName</dd>
 
             <dt class="col-sm-3">Status</dt>
-            <dd class="col-sm-9">@await Html.PartialAsync("_StatusBadge", Model.ContractStatus?.StatusName ?? "Unknown")</dd>
+            <dd class="col-sm-9">@await Html.PartialAsync("_StatusBadge", Model.ContractStatusName)</dd>
         </dl>
 
-        <form asp-action="Delete" method="post" class="mt-4 d-flex gap-2">
+        <form asp-action="Delete" method="post" class="mt-4 d-flex gap-2" onsubmit="return confirm('Delete this contract?');">
             <input type="hidden" asp-for="ContractId" />
             <button type="submit" class="btn btn-danger">Delete Contract</button>
             <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>

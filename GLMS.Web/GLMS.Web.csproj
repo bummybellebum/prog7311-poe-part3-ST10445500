@@ -15,9 +15,4 @@
     <PackageReference Include="NuGet.Packaging" Version="7.3.1" />
     <PackageReference Include="NuGet.Protocol" Version="7.3.1" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="wwwroot\uploads\signed-agreements\" />
-  </ItemGroup>
-
 </Project>

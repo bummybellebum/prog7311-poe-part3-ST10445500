@@ -1,32 +1,63 @@
-@model GLMS.Web.Models.ServiceRequest
+@model GLMS.Web.ViewModels.ServiceRequests.ServiceRequestDetailsViewModel
 @{
     ViewData["Title"] = "Service Request Details";
+    var request = Model.Request;
+    var canEditRequests = User.IsInRole(ApplicationRoles.Admin);
+    var canUpdateStatus = User.IsInRole(ApplicationRoles.Admin) || User.IsInRole(ApplicationRoles.LogisticsManager);
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h1 class="h3 mb-1">Service Request #@Model.ServiceRequestId</h1>
+        <h1 class="h3 mb-1">Service Request #@request.ServiceRequestId</h1>
         <p class="text-muted mb-0">Service request details and converted values.</p>
     </div>
     <div class="d-flex gap-2">
-        <a asp-action="Edit" asp-route-id="@Model.ServiceRequestId" class="btn btn-primary">Edit</a>
+        @if (canEditRequests)
+        {
+            <a asp-action="Edit" asp-route-id="@request.ServiceRequestId" class="btn btn-primary">Edit</a>
+        }
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
 </div>
 
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
 <div class="card border-0 shadow-sm">
     <div class="card-body">
         <div class="row g-3">
-            <div class="col-md-4"><strong>Contract:</strong> @(Model.Contract?.Title ?? "-")</div>
-            <div class="col-md-4"><strong>Status:</strong> @await Html.PartialAsync("_StatusBadge", Model.ServiceRequestStatus?.StatusName ?? "Unknown")</div>
-            <div class="col-md-4"><strong>Requested:</strong> @Model.RequestedAt.ToString("yyyy-MM-dd HH:mm")</div>
-            <div class="col-md-4"><strong>Original Amount:</strong> @Model.AmountOriginal.ToString("N2") @Model.OriginalCurrencyCode</div>
-            <div class="col-md-4"><strong>Rate to ZAR:</strong> @Model.ExchangeRateToZAR.ToString("N6")</div>
-            <div class="col-md-4"><strong>ZAR Amount:</strong> @Model.AmountZAR.ToString("N2")</div>
+            <div class="col-md-4"><strong>Contract:</strong> @request.ContractTitle</div>
+            <div class="col-md-4"><strong>Status:</strong> @await Html.PartialAsync("_StatusBadge", request.ServiceRequestStatusName)</div>
+            <div class="col-md-4"><strong>Requested:</strong> @request.RequestedAt.ToString("yyyy-MM-dd HH:mm")</div>
+            <div class="col-md-4"><strong>Original Amount:</strong> @request.AmountOriginal.ToString("N2") @request.OriginalCurrencyCode</div>
+            <div class="col-md-4"><strong>Rate to ZAR:</strong> @request.ExchangeRateToZAR.ToString("N6")</div>
+            <div class="col-md-4"><strong>ZAR Amount:</strong> @request.AmountZAR.ToString("N2")</div>
+            <div class="col-md-4"><strong>Requested By:</strong> @(request.RequestedByEmail ?? request.RequestedByUserId)</div>
             <div class="col-12">
                 <strong>Description</strong>
-                <p class="mb-0 mt-1 text-muted">@Model.Description</p>
+                <p class="mb-0 mt-1 text-muted">@request.Description</p>
             </div>
         </div>
+
+        @if (canUpdateStatus)
+        {
+            <hr />
+            <form asp-action="UpdateStatus" asp-route-id="@request.ServiceRequestId" method="post" class="row g-2 align-items-end" onsubmit="return confirm('Update this service request status?');">
+                @Html.AntiForgeryToken()
+                <div class="col-md-8">
+                    <label class="form-label">Update Status</label>
+                    <select name="serviceRequestStatusId" asp-items="Model.StatusOptions" class="form-select"></select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-outline-primary w-100">Save Status</button>
+                </div>
+            </form>
+        }
     </div>
 </div>

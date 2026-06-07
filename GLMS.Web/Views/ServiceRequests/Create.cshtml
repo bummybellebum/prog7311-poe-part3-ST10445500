@@ -4,9 +4,11 @@
     var isPreselectedContract = ViewData["PreselectedContract"] as bool? == true;
 }
 
-<div class="mb-3">
-    <h1 class="h3 mb-1">Create Service Request</h1>
-    <p class="text-muted mb-0">Create a request against an active contract and convert to ZAR.</p>
+<div class="content-header">
+    <div>
+        <h1 class="h3 mb-1">Create Service Request</h1>
+        <p class="text-muted mb-0">Create a request against an active contract and convert to ZAR.</p>
+    </div>
 </div>
 
 @if (ViewData["CurrencyWarning"] is string currencyWarning)
@@ -19,7 +21,7 @@
     <div class="alert alert-info py-2">Contract preselected from Contracts list. Complete the remaining fields and save.</div>
 }
 
-<div class="card border-0 shadow-sm">
+<div class="form-panel">
     <div class="card-body">
         <form asp-action="Create" method="post" novalidate>
             <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>

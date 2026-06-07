@@ -1,6 +1,7 @@
 @model GLMS.Web.ViewModels.Clients.ClientDetailsViewModel
 @{
     ViewData["Title"] = "Client Details";
+    var canManageClients = User.IsInRole(ApplicationRoles.Admin) || User.IsInRole(ApplicationRoles.ContractManager);
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -9,7 +10,10 @@
         <p class="text-muted mb-0">Client profile and related contract summary.</p>
     </div>
     <div class="d-flex gap-2">
-        <a asp-action="Edit" asp-route-id="@Model.Client.ClientId" class="btn btn-primary">Edit</a>
+        @if (canManageClients)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Client.ClientId" class="btn btn-primary">Edit</a>
+        }
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
 </div>
@@ -66,7 +70,7 @@
                         {
                             <tr>
                                 <td>@contract.Title</td>
-                                <td>@await Html.PartialAsync("_StatusBadge", contract.ContractStatus?.StatusName ?? "Unknown")</td>
+                                <td>@await Html.PartialAsync("_StatusBadge", contract.ContractStatusName)</td>
                                 <td>@contract.StartDate.ToString("yyyy-MM-dd")</td>
                                 <td>@contract.EndDate.ToString("yyyy-MM-dd")</td>
                                 <td class="text-end">

@@ -1,4 +1,4 @@
-using GLMS.Web.Models;
+using GLMS.Web.ViewModels.Api;
 
 //ST10445500 - PROG7311 - GLMS POE
 //ClientService
@@ -10,11 +10,11 @@ namespace GLMS.Web.Services
     //manages Clients by calling the GLMS API
     public interface IClientService
     {
-        Task<List<Client>> GetAllAsync();
-        Task<Client?> GetByIdAsync(int id);
-        Task<Client?> GetWithContractsAsync(int id);
-        Task<Client> CreateAsync(Client client);
-        Task UpdateAsync(Client client);
+        Task<List<ClientListDto>> GetAllAsync(string? search = null);
+        Task<ClientDetailDto?> GetByIdAsync(int id);
+        Task<ClientDetailDto?> GetWithContractsAsync(int id);
+        Task<ClientDetailDto> CreateAsync(CreateClientDto client);
+        Task UpdateAsync(UpdateClientDto client);
         Task DeleteAsync(int id);
     }
 
@@ -29,35 +29,39 @@ namespace GLMS.Web.Services
 
         //..............................................................................//
 
-        public async Task<List<Client>> GetAllAsync()
+        public async Task<List<ClientListDto>> GetAllAsync(string? search = null)
         {
-            return await GetAsync<List<Client>>("api/clients") ?? new List<Client>();
+            var url = string.IsNullOrWhiteSpace(search)
+                ? "api/clients"
+                : $"api/clients?search={Uri.EscapeDataString(search)}";
+
+            return await GetAsync<List<ClientListDto>>(url) ?? new List<ClientListDto>();
         }
 
         //..............................................................................//
 
-        public Task<Client?> GetByIdAsync(int id)
+        public Task<ClientDetailDto?> GetByIdAsync(int id)
         {
-            return GetAsync<Client>($"api/clients/{id}");
+            return GetAsync<ClientDetailDto>($"api/clients/{id}");
         }
 
         //..............................................................................//
 
-        public Task<Client?> GetWithContractsAsync(int id)
+        public Task<ClientDetailDto?> GetWithContractsAsync(int id)
         {
             return GetByIdAsync(id);
         }
 
         //..............................................................................//
 
-        public Task<Client> CreateAsync(Client client)
+        public Task<ClientDetailDto> CreateAsync(CreateClientDto client)
         {
-            return PostAsync<Client>("api/clients", client);
+            return PostAsync<ClientDetailDto>("api/clients", client);
         }
 
         //..............................................................................//
 
-        public Task UpdateAsync(Client client)
+        public Task UpdateAsync(UpdateClientDto client)
         {
             return PutAsync($"api/clients/{client.ClientId}", client);
         }

@@ -1,4 +1,4 @@
-@model GLMS.Web.Models.Client
+@model GLMS.Web.ViewModels.Api.ClientDetailDto
 @{
     ViewData["Title"] = "Delete Client";
 }
@@ -23,7 +23,7 @@
             <dd class="col-sm-9">@await Html.PartialAsync("_StatusBadge", Model.IsActive ? "Active" : "Inactive")</dd>
         </dl>
 
-        <form asp-action="Delete" method="post" class="mt-4 d-flex gap-2">
+        <form asp-action="Delete" method="post" class="mt-4 d-flex gap-2" onsubmit="return confirm('Delete this client?');">
             <input type="hidden" asp-for="ClientId" />
             <button type="submit" class="btn btn-danger">Delete Client</button>
             <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>

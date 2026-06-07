@@ -3,12 +3,14 @@
     ViewData["Title"] = "Profile";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="content-header">
     <div>
         <h1 class="h3 mb-1">Profile</h1>
         <p class="text-muted mb-0">Update your GLMS account details.</p>
     </div>
-    <a asp-action="ChangePassword" class="btn btn-outline-primary">Change Password</a>
+    <div class="content-header-actions">
+        <a asp-action="ChangePassword" class="btn btn-outline-primary">Change Password</a>
+    </div>
 </div>
 
 @if (TempData["SuccessMessage"] is string successMessage)
@@ -16,7 +18,7 @@
     <div class="alert alert-success">@successMessage</div>
 }
 
-<div class="card shadow-sm border-0">
+<div class="form-panel">
     <div class="card-body">
         <form asp-action="Profile" method="post" novalidate>
             <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>

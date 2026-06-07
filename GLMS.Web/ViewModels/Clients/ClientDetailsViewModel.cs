@@ -1,4 +1,4 @@
-using GLMS.Web.Models;
+using GLMS.Web.ViewModels.Api;
 
 //ST10445500 - PROG7311 - GLMS POE
 //ClientDetailsViewModel
@@ -9,7 +9,7 @@ namespace GLMS.Web.ViewModels.Clients
 {
     public class ClientDetailsViewModel
     {
-        public Client Client { get; set; } = new();
+        public ClientDetailDto Client { get; set; } = new();
         public int ContractCount { get; set; }
         public int ActiveContractCount { get; set; }
     }

@@ -2,18 +2,15 @@ using GLMS.Web.ViewModels.Api;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 //ST10445500 - PROG7311 - GLMS POE
-//ContractDetailsViewModel
+//ServiceRequestDetailsViewModel
 
 //..........................................o0oSTART OF FILEo0o..................................................//
 
-namespace GLMS.Web.ViewModels.Contracts
+namespace GLMS.Web.ViewModels.ServiceRequests
 {
-    public class ContractDetailsViewModel
+    public class ServiceRequestDetailsViewModel
     {
-        public ContractDetailDto Contract { get; set; } = new();
-        public ContractDocumentDto? CurrentSignedAgreement { get; set; }
-        public List<ContractDocumentDto> Documents { get; set; } = new();
-        public List<ServiceRequestListDto> ServiceRequests { get; set; } = new();
+        public ServiceRequestDetailDto Request { get; set; } = new();
         public List<SelectListItem> StatusOptions { get; set; } = new();
     }
 }

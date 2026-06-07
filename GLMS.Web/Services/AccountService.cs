@@ -27,7 +27,9 @@ namespace GLMS.Web.Services
         public async Task<LoginResult> LoginAsync(LoginViewModel vm)
         {
             using var content = new StringContent(JsonSerializer.Serialize(vm, JsonOptions), Encoding.UTF8, "application/json");
-            using var response = await HttpClient.PostAsync("api/auth/login", content);
+            using var request = CreateRequest(HttpMethod.Post, "api/auth/login");
+            request.Content = content;
+            using var response = await SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -76,7 +78,7 @@ namespace GLMS.Web.Services
 
         public async Task<ProfileViewModel?> GetProfileAsync(ClaimsPrincipal user)
         {
-            var auth = await GetAsync<AuthResponseDto>("api/auth/me");
+            var auth = await GetAsync<AuthResponseDto>("api/accounts/me");
             if (auth == null)
             {
                 return null;
@@ -96,7 +98,7 @@ namespace GLMS.Web.Services
         {
             try
             {
-                await PutAsync("api/auth/profile", vm);
+                await PutAsync("api/accounts/me", vm);
                 return AccountResult.Success();
             }
             catch (InvalidOperationException ex)
@@ -111,7 +113,7 @@ namespace GLMS.Web.Services
         {
             try
             {
-                await PostNoResultAsync("api/auth/change-password", vm);
+                await PostNoResultAsync("api/accounts/me/change-password", vm);
                 return AccountResult.Success();
             }
             catch (InvalidOperationException ex)
@@ -124,14 +126,14 @@ namespace GLMS.Web.Services
 
         public async Task<IReadOnlyList<AdminUserListItemViewModel>> GetUsersAsync()
         {
-            return await GetAsync<List<AdminUserListItemViewModel>>("api/admin/users") ?? new List<AdminUserListItemViewModel>();
+            return await GetAsync<List<AdminUserListItemViewModel>>("api/accounts") ?? new List<AdminUserListItemViewModel>();
         }
 
         //..............................................................................//
 
         public Task<AdminUserEditViewModel?> GetUserForEditAsync(string userId)
         {
-            return GetAsync<AdminUserEditViewModel>($"api/admin/users/{Uri.EscapeDataString(userId)}");
+            return GetAsync<AdminUserEditViewModel>($"api/accounts/{Uri.EscapeDataString(userId)}");
         }
 
         //..............................................................................//
@@ -140,7 +142,7 @@ namespace GLMS.Web.Services
         {
             try
             {
-                await PostNoResultAsync("api/admin/users", vm);
+                await PostNoResultAsync("api/accounts", vm);
                 return AccountResult.Success();
             }
             catch (InvalidOperationException ex)
@@ -155,7 +157,7 @@ namespace GLMS.Web.Services
         {
             try
             {
-                await PutAsync($"api/admin/users/{Uri.EscapeDataString(vm.UserId)}", vm);
+                await PutAsync($"api/accounts/{Uri.EscapeDataString(vm.UserId)}", vm);
                 return AccountResult.Success();
             }
             catch (InvalidOperationException ex)
@@ -170,7 +172,7 @@ namespace GLMS.Web.Services
         {
             try
             {
-                await PatchAsync($"api/admin/users/{Uri.EscapeDataString(userId)}/active", new { isActive });
+                await PatchAsync($"api/accounts/{Uri.EscapeDataString(userId)}/active", new { isActive });
                 return AccountResult.Success();
             }
             catch (InvalidOperationException ex)
@@ -185,7 +187,7 @@ namespace GLMS.Web.Services
         {
             try
             {
-                await PostNoResultAsync($"api/admin/users/{Uri.EscapeDataString(vm.UserId)}/reset-password", vm);
+                await PostNoResultAsync($"api/accounts/{Uri.EscapeDataString(vm.UserId)}/reset-password", vm);
                 return AccountResult.Success();
             }
             catch (InvalidOperationException ex)

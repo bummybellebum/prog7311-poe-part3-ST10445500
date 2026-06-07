@@ -1,5 +1,6 @@
 using GLMS.Web.Models;
 using GLMS.Web.Services;
+using GLMS.Web.ViewModels.Api;
 using GLMS.Web.ViewModels.ServiceRequests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,44 +13,31 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace GLMS.Web.Controllers
 {
-    [Authorize(Roles = "Admin,LogisticsManager")]
+    [Authorize(Roles = ApplicationRoles.AllRoles)]
     public class ServiceRequestsController : Controller
     {
         private readonly IServiceRequestService _serviceRequestService;
         private readonly IContractService _contractService;
         private readonly ILookupService _lookupService;
         private readonly ICurrencyExchangeService _currencyExchangeService;
-        private readonly ICurrentUserService _currentUserService;
 
         public ServiceRequestsController(
             IServiceRequestService serviceRequestService,
             IContractService contractService,
             ILookupService lookupService,
-            ICurrencyExchangeService currencyExchangeService,
-            ICurrentUserService currentUserService)
+            ICurrencyExchangeService currencyExchangeService)
         {
             _serviceRequestService = serviceRequestService;
             _contractService = contractService;
             _lookupService = lookupService;
             _currencyExchangeService = currencyExchangeService;
-            _currentUserService = currentUserService;
         }
 
         //............................................................................................//
 
         public async Task<IActionResult> Index(ServiceRequestFilterViewModel filter)
         {
-            var requests = await _serviceRequestService.GetAllAsync();
-
-            if (filter.ContractId.HasValue)
-            {
-                requests = requests.Where(r => r.ContractId == filter.ContractId.Value).ToList();
-            }
-
-            if (filter.StatusId.HasValue)
-            {
-                requests = requests.Where(r => r.ServiceRequestStatusId == filter.StatusId.Value).ToList();
-            }
+            var requests = await _serviceRequestService.GetAllAsync(filter.ContractId, filter.StatusId);
 
             filter.Requests = requests.OrderByDescending(r => r.RequestedAt).ToList();
             await PopulateFilterOptionsAsync(filter);
@@ -67,11 +55,22 @@ namespace GLMS.Web.Controllers
                 return NotFound();
             }
 
-            return View(request);
+            var statuses = await _lookupService.GetServiceRequestStatusesAsync();
+            var vm = new ServiceRequestDetailsViewModel
+            {
+                Request = request,
+                StatusOptions = statuses
+                    .OrderBy(s => s.Name)
+                    .Select(s => new SelectListItem(s.Name, s.Id.ToString(), s.Id == request.ServiceRequestStatusId))
+                    .ToList()
+            };
+
+            return View(vm);
         }
 
         //............................................................................................//
 
+        [Authorize(Roles = ApplicationRoles.AdminOrLogisticsManager)]
         public async Task<IActionResult> Create(int? contractId)
         {
             var vm = new ServiceRequestFormViewModel
@@ -110,6 +109,7 @@ namespace GLMS.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = ApplicationRoles.AdminOrLogisticsManager)]
         public async Task<IActionResult> Create(ServiceRequestFormViewModel vm)
         {
             if (vm.ExchangeRateToZar > 0)
@@ -125,16 +125,9 @@ namespace GLMS.Web.Controllers
 
             try
             {
-                var userId = _currentUserService.UserId;
-                if (string.IsNullOrWhiteSpace(userId))
-                {
-                    return Forbid();
-                }
-
-                var entity = new ServiceRequest
+                var entity = new CreateServiceRequestDto
                 {
                     ContractId = vm.ContractId,
-                    RequestedByUserId = userId,
                     Description = vm.Description,
                     AmountOriginal = vm.AmountOriginal,
                     OriginalCurrencyCode = vm.OriginalCurrencyCode.Trim().ToUpperInvariant(),
@@ -155,6 +148,7 @@ namespace GLMS.Web.Controllers
 
         //............................................................................................//
 
+        [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> Edit(int id)
         {
             var request = await _serviceRequestService.GetByIdAsync(id);
@@ -183,6 +177,7 @@ namespace GLMS.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> Edit(int id, ServiceRequestFormViewModel vm)
         {
             if (id != vm.ServiceRequestId)
@@ -209,13 +204,19 @@ namespace GLMS.Web.Controllers
                     return NotFound();
                 }
 
-                existing.ContractId = vm.ContractId;
-                existing.Description = vm.Description;
-                existing.AmountOriginal = vm.AmountOriginal;
-                existing.OriginalCurrencyCode = vm.OriginalCurrencyCode.Trim().ToUpperInvariant();
-                existing.ServiceRequestStatusId = vm.ServiceRequestStatusId;
+                var dto = new UpdateServiceRequestDto
+                {
+                    ServiceRequestId = id,
+                    ContractId = vm.ContractId,
+                    RequestedByUserId = existing.RequestedByUserId,
+                    Description = vm.Description,
+                    AmountOriginal = vm.AmountOriginal,
+                    OriginalCurrencyCode = vm.OriginalCurrencyCode.Trim().ToUpperInvariant(),
+                    ServiceRequestStatusId = vm.ServiceRequestStatusId,
+                    RequestedAt = existing.RequestedAt
+                };
 
-                await _serviceRequestService.UpdateAsync(existing);
+                await _serviceRequestService.UpdateAsync(dto);
                 TempData["SuccessMessage"] = "Service request updated successfully.";
                 return RedirectToAction(nameof(Index));
             }
@@ -229,6 +230,7 @@ namespace GLMS.Web.Controllers
 
         //............................................................................................//
 
+        [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> Delete(int id)
         {
             var request = await _serviceRequestService.GetDetailsAsync(id);
@@ -244,6 +246,7 @@ namespace GLMS.Web.Controllers
 
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             try
@@ -262,6 +265,7 @@ namespace GLMS.Web.Controllers
         //............................................................................................//
 
         [HttpGet]
+        [Authorize(Roles = ApplicationRoles.AdminOrLogisticsManager)]
         public async Task<IActionResult> GetExchangeRate(string currencyCode)
         {
             if (string.IsNullOrWhiteSpace(currencyCode))
@@ -276,8 +280,28 @@ namespace GLMS.Web.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ex.Message });
             }
+        }
+
+        //............................................................................................//
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = ApplicationRoles.AdminOrLogisticsManager)]
+        public async Task<IActionResult> UpdateStatus(int id, int serviceRequestStatusId)
+        {
+            try
+            {
+                await _serviceRequestService.UpdateStatusAsync(id, serviceRequestStatusId);
+                TempData["SuccessMessage"] = "Service request status updated successfully.";
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is KeyNotFoundException)
+            {
+                TempData["ErrorMessage"] = ex.Message;
+            }
+
+            return RedirectToAction(nameof(Details), new { id });
         }
 
         //............................................................................................//
@@ -293,8 +317,8 @@ namespace GLMS.Web.Controllers
                 .ToList();
 
             vm.StatusOptions = statuses
-                .OrderBy(s => s.StatusName)
-                .Select(s => new SelectListItem(s.StatusName, s.ServiceRequestStatusId.ToString()))
+                .OrderBy(s => s.Name)
+                .Select(s => new SelectListItem(s.Name, s.Id.ToString()))
                 .ToList();
         }
 
@@ -308,7 +332,7 @@ namespace GLMS.Web.Controllers
             if (includeOnlyActiveContracts)
             {
                 contracts = contracts
-                    .Where(c => string.Equals(c.ContractStatus?.StatusName, "Active", StringComparison.OrdinalIgnoreCase))
+                    .Where(c => string.Equals(c.ContractStatusName, "Active", StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
 
@@ -318,8 +342,8 @@ namespace GLMS.Web.Controllers
                 .ToList();
 
             vm.StatusOptions = statuses
-                .OrderBy(s => s.StatusName)
-                .Select(s => new SelectListItem(s.StatusName, s.ServiceRequestStatusId.ToString()))
+                .OrderBy(s => s.Name)
+                .Select(s => new SelectListItem(s.Name, s.Id.ToString()))
                 .ToList();
 
             try
@@ -338,10 +362,10 @@ namespace GLMS.Web.Controllers
 
             if (vm.ServiceRequestStatusId == 0)
             {
-                var pending = statuses.FirstOrDefault(s => string.Equals(s.StatusName, "Pending", StringComparison.OrdinalIgnoreCase));
+                var pending = statuses.FirstOrDefault(s => string.Equals(s.Name, "Pending", StringComparison.OrdinalIgnoreCase));
                 if (pending != null)
                 {
-                    vm.ServiceRequestStatusId = pending.ServiceRequestStatusId;
+                    vm.ServiceRequestStatusId = pending.Id;
                 }
             }
 

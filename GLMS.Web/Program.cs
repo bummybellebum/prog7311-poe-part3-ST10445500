@@ -1,6 +1,8 @@
 using GLMS.Web.Services;
+using GLMS.Web.Services.Testing;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 
 //ST10445500 - PROG7311 - GLMS POE
 //Program.cs
@@ -14,15 +16,34 @@ namespace GLMS.Web
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            var isTesting = builder.Environment.IsEnvironment("Testing");
+            if (isTesting)
+            {
+                builder.Logging.ClearProviders();
+                builder.Logging.AddConsole();
+            }
 
             //register MVC authentication with a local cookie
-            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-                .AddCookie(options =>
-                {
-                    options.LoginPath = "/Account/Login";
-                    options.LogoutPath = "/Account/Logout";
-                    options.AccessDeniedPath = "/Account/AccessDenied";
-                });
+            if (isTesting)
+            {
+                builder.Services.AddDataProtection()
+                    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "..", "obj", "glms-web-testing-keys")));
+
+                builder.Services.AddAuthentication(TestingAuthHandler.SchemeName)
+                    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestingAuthHandler>(
+                        TestingAuthHandler.SchemeName,
+                        options => { });
+            }
+            else
+            {
+                builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                    .AddCookie(options =>
+                    {
+                        options.LoginPath = "/Account/Login";
+                        options.LogoutPath = "/Account/Logout";
+                        options.AccessDeniedPath = "/Account/AccessDenied";
+                    });
+            }
 
             builder.Services.AddAuthorization(options =>
             {
@@ -33,15 +54,26 @@ namespace GLMS.Web
 
             builder.Services.AddHttpContextAccessor();
 
-            RegisterApiClient<IAccountService, AccountService>(builder);
-            RegisterApiClient<IClientService, ClientService>(builder);
-            RegisterApiClient<IContractService, ContractService>(builder);
-            RegisterApiClient<IContractDocumentService, ContractDocumentService>(builder);
-            RegisterApiClient<IServiceRequestService, ServiceRequestService>(builder);
-            RegisterApiClient<ILookupService, LookupService>(builder);
-            RegisterApiClient<ICurrencyExchangeService, CurrencyExchangeService>(builder);
-
-            builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+            if (isTesting)
+            {
+                builder.Services.AddScoped<IAccountService, TestingAccountService>();
+                builder.Services.AddScoped<IClientService, TestingClientService>();
+                builder.Services.AddScoped<IContractService, TestingContractService>();
+                builder.Services.AddScoped<IContractDocumentService, TestingContractDocumentService>();
+                builder.Services.AddScoped<IServiceRequestService, TestingServiceRequestService>();
+                builder.Services.AddScoped<ILookupService, TestingLookupService>();
+                builder.Services.AddScoped<ICurrencyExchangeService, TestingCurrencyExchangeService>();
+            }
+            else
+            {
+                RegisterApiClient<IAccountService, AccountService>(builder);
+                RegisterApiClient<IClientService, ClientService>(builder);
+                RegisterApiClient<IContractService, ContractService>(builder);
+                RegisterApiClient<IContractDocumentService, ContractDocumentService>(builder);
+                RegisterApiClient<IServiceRequestService, ServiceRequestService>(builder);
+                RegisterApiClient<ILookupService, LookupService>(builder);
+                RegisterApiClient<ICurrencyExchangeService, CurrencyExchangeService>(builder);
+            }
 
             //add services to the container.
             builder.Services.AddControllersWithViews();
@@ -56,7 +88,10 @@ namespace GLMS.Web
                 app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
+            if (!isTesting)
+            {
+                app.UseHttpsRedirection();
+            }
             app.UseStaticFiles();
             app.UseRouting();
 

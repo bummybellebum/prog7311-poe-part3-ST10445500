@@ -7,89 +7,194 @@
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/GLMS.Web.styles.css" asp-append-version="true" />
 </head>
+@{
+    var isSignedIn = User.Identity?.IsAuthenticated == true;
+    var isAdmin = User.IsInRole(ApplicationRoles.Admin);
+    var isContractManager = User.IsInRole(ApplicationRoles.ContractManager);
+    var isLogisticsManager = User.IsInRole(ApplicationRoles.LogisticsManager);
+    var canManageContracts = isAdmin || isContractManager;
+    var canCreateRequests = isAdmin || isLogisticsManager;
+    var roleName = isAdmin ? ApplicationRoles.Admin : isContractManager ? ApplicationRoles.ContractManager : isLogisticsManager ? ApplicationRoles.LogisticsManager : "Guest";
+    var displayName = User.Identity?.Name ?? "User";
+    var userInitial = string.IsNullOrWhiteSpace(displayName) ? "U" : displayName.Substring(0, 1).ToUpperInvariant();
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    string NavClass(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? "sidebar-link active" : "sidebar-link";
+    string MobileNavClass(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? "mobile-nav-link active" : "mobile-nav-link";
+}
 <body>
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom shadow-sm mb-4">
-            <div class="container-fluid">
-                <a class="navbar-brand fw-semibold" asp-area="" asp-controller="Home" asp-action="Index">GLMS</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+    @if (isSignedIn)
+    {
+        <div class="app-shell">
+            <aside class="app-sidebar">
+                <a class="brand-block text-decoration-none" asp-controller="Home" asp-action="Index">
+                    <span class="brand-mark" aria-hidden="true">GL</span>
+                    <span>
+                        <span class="brand-title">GLMS</span>
+                        <span class="brand-subtitle">Global Logistics<br />Management System</span>
+                    </span>
+                </a>
 
-                <div class="collapse navbar-collapse" id="mainNav">
-                    @if (User.Identity?.IsAuthenticated == true)
+                <nav class="sidebar-nav" aria-label="Main navigation">
+                    <a class="@NavClass("Home")" asp-controller="Home" asp-action="Index">
+                        <span class="nav-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5v8a1.5 1.5 0 0 1-1.5 1.5H15v-5.5H9V20H5.5A1.5 1.5 0 0 1 4 18.5v-8Z" /></svg>
+                        </span>
+                        Dashboard
+                    </a>
+                    <a class="@NavClass("Clients")" asp-controller="Clients" asp-action="Index">
+                        <span class="nav-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M16.5 20v-1.8c0-2.1-1.8-3.7-4.5-3.7s-4.5 1.6-4.5 3.7V20" /><path d="M12 12.2a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2Z" /><path d="M4.5 18.5v-1.1c0-1.3.8-2.4 2.1-3" /><path d="M17.4 14.4c1.3.6 2.1 1.7 2.1 3v1.1" /></svg>
+                        </span>
+                        Clients
+                    </a>
+                    <a class="@NavClass("Contracts")" asp-controller="Contracts" asp-action="Index">
+                        <span class="nav-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M7 3.8h7.2L18 7.6V20H7V3.8Z" /><path d="M14 4v4h4" /><path d="M9.5 11h5" /><path d="M9.5 14h5" /><path d="M9.5 17h3" /></svg>
+                        </span>
+                        Contracts
+                    </a>
+                    <a class="@NavClass("ServiceRequests")" asp-controller="ServiceRequests" asp-action="Index">
+                        <span class="nav-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M5 7.5h10v8H5z" /><path d="M15 10h3.2l1.8 2.4v3.1h-5" /><path d="M7.4 18.2a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4Z" /><path d="M17.7 18.2a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4Z" /></svg>
+                        </span>
+                        Service Requests
+                    </a>
+                    @if (isAdmin)
                     {
-                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Dashboard</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="Clients" asp-action="Index">Clients</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="Contracts" asp-action="Index">Contracts</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="ServiceRequests" asp-action="Index">Service Requests</a>
-                            </li>
-                            @if (User.IsInRole("Admin"))
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-area="" asp-controller="AdminUsers" asp-action="Index">Users</a>
-                                </li>
-                            }
-                        </ul>
+                        <a class="@NavClass("AdminUsers")" asp-controller="AdminUsers" asp-action="Index">
+                            <span class="nav-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M8.5 11.8a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" /><path d="M3.8 19.5v-1.2c0-2 1.9-3.6 4.7-3.6s4.7 1.6 4.7 3.6v1.2" /><path d="M16 8h4" /><path d="M18 6v4" /><path d="M15.5 14.2h4.7" /><path d="M15.5 17.2h3.2" /></svg>
+                            </span>
+                            Users
+                        </a>
                     }
+                    <a class="@(NavClass("Account")) mt-lg-3" asp-controller="Account" asp-action="Profile">
+                        <span class="nav-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M12 12.2a3.8 3.8 0 1 0 0-7.6 3.8 3.8 0 0 0 0 7.6Z" /><path d="M5.2 20v-1.5c0-2.4 2.7-4.4 6.8-4.4s6.8 2 6.8 4.4V20" /></svg>
+                        </span>
+                        Profile
+                    </a>
+                </nav>
 
-                    <ul class="navbar-nav ms-auto">
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="Account" asp-action="Profile">@User.Identity?.Name</a>
-                            </li>
-                            <li class="nav-item">
-                                <form class="d-inline" asp-area="" asp-controller="Account" asp-action="Logout" method="post">
-                                    <button type="submit" class="btn btn-link nav-link p-0 mt-2">Logout</button>
-                                </form>
-                            </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="Account" asp-action="Login">Login</a>
-                            </li>
-                        }
-                    </ul>
+                <div class="sidebar-footer">
+                    <form asp-controller="Account" asp-action="Logout" method="post">
+                        <button type="submit" class="sidebar-link sidebar-logout">
+                            <span class="nav-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M10 5H6.5A1.5 1.5 0 0 0 5 6.5v11A1.5 1.5 0 0 0 6.5 19H10" /><path d="M14 8l4 4-4 4" /><path d="M18 12H9" /></svg>
+                            </span>
+                            Logout
+                        </button>
+                    </form>
                 </div>
-            </div>
-        </nav>
+            </aside>
 
-        @if (User.Identity?.IsAuthenticated == true)
-        {
-            <div class="container mb-3">
-                <div class="quick-actions-bar d-flex flex-wrap gap-2">
-                    <span class="text-muted small me-1 align-self-center">Quick actions:</span>
-                    <a class="btn btn-sm btn-outline-primary" asp-controller="Clients" asp-action="Create">+ Client</a>
-                    <a class="btn btn-sm btn-outline-primary" asp-controller="Contracts" asp-action="Create">+ Contract</a>
-                    <a class="btn btn-sm btn-outline-primary" asp-controller="ServiceRequests" asp-action="Create">+ Service Request</a>
-                </div>
+            <div class="app-main">
+                <header class="mobile-appbar">
+                    <button class="icon-button" type="button" data-mobile-nav-toggle aria-controls="mobileMenu" aria-expanded="false" aria-label="Open navigation">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+                    </button>
+                    <a class="mobile-brand text-decoration-none" asp-controller="Home" asp-action="Index">
+                        <span class="brand-mark brand-mark-sm" aria-hidden="true">GL</span>
+                        <span>GLMS</span>
+                    </a>
+                    <a class="icon-button" asp-controller="Account" asp-action="Profile" aria-label="Profile">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12.2a3.8 3.8 0 1 0 0-7.6 3.8 3.8 0 0 0 0 7.6Z" /><path d="M5.2 20v-1.5c0-2.4 2.7-4.4 6.8-4.4s6.8 2 6.8 4.4V20" /></svg>
+                    </a>
+                </header>
+
+                <header class="topbar">
+                    <div>
+                        <div class="topbar-label">Current workspace</div>
+                        <div class="fw-semibold">@roleName</div>
+                    </div>
+                    <div class="topbar-actions">
+                        @if (canManageContracts)
+                        {
+                            <a class="btn btn-sm btn-primary" asp-controller="Clients" asp-action="Create">Add Client</a>
+                            <a class="btn btn-sm btn-accent" asp-controller="Contracts" asp-action="Create">New Contract</a>
+                        }
+                        @if (canCreateRequests)
+                        {
+                            <a class="btn btn-sm btn-primary" asp-controller="ServiceRequests" asp-action="Create">Create Request</a>
+                        }
+                        <div class="vr d-none d-md-block"></div>
+                        <a class="account-pill" asp-controller="Account" asp-action="Profile">
+                            <span class="account-avatar" aria-hidden="true">@userInitial</span>
+                            <span class="account-name">@displayName</span>
+                        </a>
+                        <form class="d-inline" asp-controller="Account" asp-action="Logout" method="post">
+                            <button type="submit" class="btn btn-sm btn-outline-dark">Logout</button>
+                        </form>
+                    </div>
+                </header>
+
+                <main role="main" class="app-content">
+                    @RenderBody()
+                </main>
+
+                <nav class="mobile-bottom-nav" aria-label="Mobile primary navigation">
+                    <a class="@MobileNavClass("Home")" asp-controller="Home" asp-action="Index">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5v8a1.5 1.5 0 0 1-1.5 1.5H15v-5.5H9V20H5.5A1.5 1.5 0 0 1 4 18.5v-8Z" /></svg>
+                        Dashboard
+                    </a>
+                    <a class="@MobileNavClass("Clients")" asp-controller="Clients" asp-action="Index">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 20v-1.8c0-2.1-1.8-3.7-4.5-3.7s-4.5 1.6-4.5 3.7V20" /><path d="M12 12.2a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2Z" /></svg>
+                        Clients
+                    </a>
+                    <a class="@MobileNavClass("Contracts")" asp-controller="Contracts" asp-action="Index">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.8h7.2L18 7.6V20H7V3.8Z" /><path d="M14 4v4h4" /><path d="M9.5 12h5" /><path d="M9.5 15h5" /></svg>
+                        Contracts
+                    </a>
+                    <a class="@MobileNavClass("ServiceRequests")" asp-controller="ServiceRequests" asp-action="Index">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7.5h10v8H5z" /><path d="M15 10h3.2l1.8 2.4v3.1h-5" /><path d="M7.4 18.2a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4Z" /></svg>
+                        Requests
+                    </a>
+                    <button class="mobile-nav-link" type="button" data-mobile-nav-toggle aria-controls="mobileMenu" aria-expanded="false">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.1M12 12h.1M19 12h.1" /></svg>
+                        More
+                    </button>
+                </nav>
             </div>
-        }
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+        </div>
+
+        <div class="mobile-menu-backdrop" data-mobile-nav-close></div>
+        <aside class="mobile-menu" id="mobileMenu" aria-label="Mobile navigation" aria-hidden="true">
+            <div class="mobile-menu-header">
+                <div class="account-summary">
+                    <span class="account-avatar account-avatar-lg" aria-hidden="true">@userInitial</span>
+                    <span>
+                        <span class="account-summary-name">@displayName</span>
+                        <span class="account-summary-role">@roleName</span>
+                    </span>
+                </div>
+                <button class="icon-button icon-button-light" type="button" data-mobile-nav-close aria-label="Close navigation">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+                </button>
+            </div>
+            <nav class="mobile-menu-nav" aria-label="Mobile menu links">
+                <a class="@MobileNavClass("Home")" asp-controller="Home" asp-action="Index">Dashboard</a>
+                <a class="@MobileNavClass("Clients")" asp-controller="Clients" asp-action="Index">Clients</a>
+                <a class="@MobileNavClass("Contracts")" asp-controller="Contracts" asp-action="Index">Contracts</a>
+                <a class="@MobileNavClass("ServiceRequests")" asp-controller="ServiceRequests" asp-action="Index">Service Requests</a>
+                @if (isAdmin)
+                {
+                    <a class="@MobileNavClass("AdminUsers")" asp-controller="AdminUsers" asp-action="Index">Users</a>
+                }
+                <a class="@MobileNavClass("Account")" asp-controller="Account" asp-action="Profile">Profile</a>
+                <form asp-controller="Account" asp-action="Logout" method="post">
+                    <button type="submit" class="mobile-menu-logout">Logout</button>
+                </form>
+            </nav>
+        </aside>
+    }
+    else
+    {
+        <main role="main" class="auth-shell">
             @RenderBody()
         </main>
-    </div>
+    }
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - GLMS
-        </div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
