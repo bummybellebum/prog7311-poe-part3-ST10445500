@@ -21,11 +21,11 @@ services:
       retries: 12
       start_period: 30s
 
-  glms-backend-api:
+  backend-api:
     build:
       context: .
       dockerfile: GLMS.Api/Dockerfile
-    container_name: glms-backend-api
+    container_name: backend-api
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_HTTP_PORTS: "8080"
@@ -51,11 +51,11 @@ services:
       sql-server-db:
         condition: service_healthy
 
-  glms-frontend-web:
+  frontend-web:
     build:
       context: .
       dockerfile: GLMS.Web/Dockerfile
-    container_name: glms-frontend-web
+    container_name: frontend-web
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_HTTP_PORTS: "8080"
@@ -66,7 +66,7 @@ services:
     networks:
       - glms-network
     depends_on:
-      glms-backend-api:
+      backend-api:
         condition: service_started
 
 volumes:
