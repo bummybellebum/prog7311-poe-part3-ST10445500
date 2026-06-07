@@ -14,12 +14,15 @@ using Microsoft.OpenApi;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using GLMS.Api.Data;
+using GLMS.Api.Data.Seeding;
+using System.Threading.Tasks;
 
 namespace GLMS.Api
 {
 	public class Program
 	{
-		public static void Main(string[] args)
+		public static async Task Main(string[] args)
 		{
 			var builder = WebApplication.CreateBuilder(args);
 
@@ -204,22 +207,7 @@ namespace GLMS.Api
 
 			if (!app.Environment.IsEnvironment("Testing"))
 			{
-				try
-				{
-					using (var scope = app.Services.CreateScope())
-					{
-						var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-						db.Database.Migrate();
-					}
-				}
-				catch (Exception ex)
-				{
-					var logger = app.Services.GetRequiredService<ILogger<Program>>();
-					logger.LogError(ex, "An error occurred while migrating or initializing the database.");
-					throw;
-				}
-
-				SeedDefaultAdminAsync(app).GetAwaiter().GetResult();
+				await app.SeedDatabaseIfNeededAsync();
 			}
 
 			app.Run();
