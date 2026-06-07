@@ -10,6 +10,7 @@ namespace GLMS.Api.DTOs.Auth
         [StringLength(100)]
         public string? LastName { get; set; }
 
+        [Required]
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
     }

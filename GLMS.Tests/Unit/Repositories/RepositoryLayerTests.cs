@@ -1,12 +1,38 @@
 using GLMS.Api.Data;
 using GLMS.Api.Data.Repositories;
 using GLMS.Api.Models;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GLMS.Tests.Unit.Repositories
 {
     public class RepositoryLayerTests
     {
+        [Fact]
+        public async Task Repository_BaseHelpers_FindFirstAndExists()
+        {
+            // Arrange
+            using var context = CreateContext();
+            await SeedCoreDataAsync(context);
+            var repository = new Repository<Client>(context);
+
+            // Act
+            var found = await repository.FindAsync(1);
+            var first = await repository.FirstOrDefaultAsync(c => c.CompanyName == "Global Freight");
+            var exists = await repository.ExistsAsync(c => c.Email == "contact@acme.com");
+
+            // Assert
+            Assert.NotNull(found);
+            Assert.Equal("Acme Corp", found!.CompanyName);
+            Assert.NotNull(first);
+            Assert.Equal(2, first!.ClientId);
+            Assert.True(exists);
+        }
+
+        //........................................................................................//
+
         [Fact]
         public async Task ClientRepository_GetClientWithContractsAsync_LoadsContractsAndStatus()
         {
@@ -168,6 +194,81 @@ namespace GLMS.Tests.Unit.Repositories
             Assert.False(await context.ContractDocuments.AnyAsync(d => d.ContractId == 1 && d.IsCurrent));
         }
 
+        //........................................................................................//
+
+        [Fact]
+        public async Task UserRepository_GetUsersAsync_ReturnsUsersOrderedByEmail()
+        {
+            // Arrange
+            using var fixture = CreateIdentityFixture();
+            await fixture.CreateUserAsync("z-user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
+            await fixture.CreateUserAsync("a-user@glms.local", "Password123!", ApplicationRoles.Admin, isActive: true);
+
+            // Act
+            var users = await fixture.UserRepository.GetUsersAsync();
+
+            // Assert
+            Assert.Equal(["a-user@glms.local", "z-user@glms.local"], users.Select(u => u.Email).ToList());
+        }
+
+        //........................................................................................//
+
+        [Fact]
+        public async Task UserRepository_ChangeRoleAsync_ReplacesExistingRole()
+        {
+            // Arrange
+            using var fixture = CreateIdentityFixture();
+            var user = await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
+
+            // Act
+            var result = await fixture.UserRepository.ChangeRoleAsync(user, ApplicationRoles.Admin);
+            var roles = await fixture.UserManager.GetRolesAsync(user);
+
+            // Assert
+            Assert.True(result.Succeeded);
+            Assert.Equal([ApplicationRoles.Admin], roles);
+        }
+
+        //........................................................................................//
+
+        [Fact]
+        public async Task UserRepository_IsEmailUniqueAsync_ExcludesCurrentUser()
+        {
+            // Arrange
+            using var fixture = CreateIdentityFixture();
+            var user = await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
+            await fixture.CreateUserAsync("other@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
+
+            // Act
+            var sameUserEmailIsUnique = await fixture.UserRepository.IsEmailUniqueAsync("user@glms.local", user.Id);
+            var otherUserEmailIsUnique = await fixture.UserRepository.IsEmailUniqueAsync("other@glms.local", user.Id);
+
+            // Assert
+            Assert.True(sameUserEmailIsUnique);
+            Assert.False(otherUserEmailIsUnique);
+        }
+
+        //........................................................................................//
+
+        [Fact]
+        public async Task UserRepository_ResetAndChangePasswordAsync_UpdatesPassword()
+        {
+            // Arrange
+            using var fixture = CreateIdentityFixture();
+            var user = await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
+
+            // Act
+            var resetResult = await fixture.UserRepository.ResetPasswordAsync(user, "Temporary123!");
+            var changeResult = await fixture.UserRepository.ChangePasswordAsync(user, "Temporary123!", "Changed123!");
+
+            // Assert
+            Assert.True(resetResult.Succeeded);
+            Assert.True(changeResult.Succeeded);
+            Assert.True(await fixture.UserManager.CheckPasswordAsync(user, "Changed123!"));
+        }
+
+        //........................................................................................//
+
         private static ApplicationDbContext CreateContext()
         {
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -316,6 +417,93 @@ namespace GLMS.Tests.Unit.Repositories
 
             await context.SaveChangesAsync();
             context.ChangeTracker.Clear();
+        }
+
+        //........................................................................................//
+
+        private static IdentityFixture CreateIdentityFixture()
+        {
+            var services = new ServiceCollection();
+            services.AddLogging();
+
+            var keyDirectory = new DirectoryInfo(Path.Combine(Path.GetTempPath(), "glms-test-data-protection-keys"));
+            keyDirectory.Create();
+            services.AddDataProtection()
+                .PersistKeysToFileSystem(keyDirectory);
+
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+
+            services.AddIdentity<ApplicationUser, IdentityRole>()
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultTokenProviders();
+
+            services.AddScoped<IUserRepository, UserRepository>();
+
+            var provider = services.BuildServiceProvider();
+            var roleManager = provider.GetRequiredService<RoleManager<IdentityRole>>();
+
+            foreach (var role in ApplicationRoles.All)
+            {
+                roleManager.CreateAsync(new IdentityRole(role)).GetAwaiter().GetResult();
+            }
+
+            return new IdentityFixture(
+                provider,
+                provider.GetRequiredService<IUserRepository>(),
+                provider.GetRequiredService<UserManager<ApplicationUser>>());
+        }
+
+        //........................................................................................//
+
+        private sealed class IdentityFixture : IDisposable
+        {
+            private readonly ServiceProvider _provider;
+
+            public IdentityFixture(
+                ServiceProvider provider,
+                IUserRepository userRepository,
+                UserManager<ApplicationUser> userManager)
+            {
+                _provider = provider;
+                UserRepository = userRepository;
+                UserManager = userManager;
+            }
+
+            public IUserRepository UserRepository { get; }
+            public UserManager<ApplicationUser> UserManager { get; }
+
+            public async Task<ApplicationUser> CreateUserAsync(
+                string email,
+                string password,
+                string role,
+                bool isActive)
+            {
+                var user = new ApplicationUser
+                {
+                    UserName = email,
+                    Email = email,
+                    EmailConfirmed = true,
+                    FirstName = "Test",
+                    LastName = "User",
+                    IsActive = isActive,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                var createResult = await UserManager.CreateAsync(user, password);
+                Assert.True(createResult.Succeeded, string.Join(" ", createResult.Errors.Select(e => e.Description)));
+
+                var roleResult = await UserManager.AddToRoleAsync(user, role);
+                Assert.True(roleResult.Succeeded, string.Join(" ", roleResult.Errors.Select(e => e.Description)));
+
+                return user;
+            }
+
+            public void Dispose()
+            {
+                _provider.Dispose();
+            }
         }
     }
 }

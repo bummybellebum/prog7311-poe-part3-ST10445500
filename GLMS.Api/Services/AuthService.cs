@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using GLMS.Api.Data.Repositories;
 using GLMS.Api.DTOs.Auth;
 using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
@@ -14,16 +15,16 @@ namespace GLMS.Api.Services
 {
     public class AuthService : IAuthService
     {
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IUserRepository _userRepository;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
 
         public AuthService(
-            UserManager<ApplicationUser> userManager,
+            IUserRepository userRepository,
             SignInManager<ApplicationUser> signInManager,
             IConfiguration configuration)
         {
-            _userManager = userManager;
+            _userRepository = userRepository;
             _signInManager = signInManager;
             _configuration = configuration;
         }
@@ -33,7 +34,7 @@ namespace GLMS.Api.Services
         public async Task<AuthServiceResult<AuthResponseDto>> LoginAsync(LoginRequestDto dto)
         {
             var email = dto.Email.Trim();
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _userRepository.FindByEmailAsync(email);
 
             if (user == null)
             {
@@ -61,7 +62,7 @@ namespace GLMS.Api.Services
                 return AuthServiceResult<AuthResponseDto>.Unauthorized("Invalid login attempt.");
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
+            var roles = await _userRepository.GetRolesAsync(user);
             var token = CreateToken(user, roles);
             return AuthServiceResult<AuthResponseDto>.Success(user.ToAuthResponseDto(roles, token.Token, token.ExpiresAt));
         }
@@ -79,20 +80,14 @@ namespace GLMS.Api.Services
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
 
-            var createResult = await _userManager.CreateAsync(user, dto.Password);
+            var createResult = await _userRepository.CreateUserAsync(user, dto.Password, ApplicationRoles.LogisticsManager);
             if (!createResult.Succeeded)
             {
                 return AuthServiceResult<RegisterResponseDto>.Failed(createResult.Errors.Select(e => e.Description));
-            }
-
-            var roleResult = await _userManager.AddToRoleAsync(user, ApplicationRoles.LogisticsManager);
-            if (!roleResult.Succeeded)
-            {
-                await _userManager.DeleteAsync(user);
-                return AuthServiceResult<RegisterResponseDto>.Failed(roleResult.Errors.Select(e => e.Description));
             }
 
             return AuthServiceResult<RegisterResponseDto>.Success(new RegisterResponseDto
@@ -107,13 +102,13 @@ namespace GLMS.Api.Services
 
         public async Task<AuthServiceResult<AuthResponseDto>> GetCurrentUserAsync(ClaimsPrincipal principal)
         {
-            var user = await _userManager.GetUserAsync(principal);
+            var user = await _userRepository.GetUserAsync(principal);
             if (user == null)
             {
                 return AuthServiceResult<AuthResponseDto>.Unauthorized("Unable to find the signed-in user.");
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
+            var roles = await _userRepository.GetRolesAsync(user);
             return AuthServiceResult<AuthResponseDto>.Success(user.ToAuthResponseDto(roles));
         }
 
@@ -121,22 +116,31 @@ namespace GLMS.Api.Services
 
         public async Task<AuthServiceResult<AuthResponseDto>> UpdateProfileAsync(ClaimsPrincipal principal, UpdateProfileRequestDto dto)
         {
-            var user = await _userManager.GetUserAsync(principal);
+            var user = await _userRepository.GetUserAsync(principal);
             if (user == null)
             {
                 return AuthServiceResult<AuthResponseDto>.Unauthorized("Unable to find the signed-in user.");
             }
 
+            var email = dto.Email.Trim();
+            if (!await _userRepository.IsEmailUniqueAsync(email, user.Id))
+            {
+                return AuthServiceResult<AuthResponseDto>.Failed("A user with this email address already exists.");
+            }
+
             user.FirstName = dto.FirstName;
             user.LastName = dto.LastName;
+            user.Email = email;
+            user.UserName = email;
+            user.UpdatedAt = DateTime.UtcNow;
 
-            var result = await _userManager.UpdateAsync(user);
+            var result = await _userRepository.UpdateUserAsync(user);
             if (!result.Succeeded)
             {
                 return AuthServiceResult<AuthResponseDto>.Failed(result.Errors.Select(e => e.Description));
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
+            var roles = await _userRepository.GetRolesAsync(user);
             return AuthServiceResult<AuthResponseDto>.Success(user.ToAuthResponseDto(roles));
         }
 
@@ -144,13 +148,13 @@ namespace GLMS.Api.Services
 
         public async Task<AuthServiceResult<object>> ChangePasswordAsync(ClaimsPrincipal principal, ChangePasswordRequestDto dto)
         {
-            var user = await _userManager.GetUserAsync(principal);
+            var user = await _userRepository.GetUserAsync(principal);
             if (user == null)
             {
                 return AuthServiceResult<object>.Unauthorized("Unable to find the signed-in user.");
             }
 
-            var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+            var result = await _userRepository.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
             return result.Succeeded
                 ? AuthServiceResult<object>.Success(new { })
                 : AuthServiceResult<object>.Failed(result.Errors.Select(e => e.Description));

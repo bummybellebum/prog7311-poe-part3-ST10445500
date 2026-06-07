@@ -1,4 +1,5 @@
 using GLMS.Api.Data;
+using GLMS.Api.Data.Repositories;
 using GLMS.Api.DTOs.Auth;
 using GLMS.Api.Models;
 using GLMS.Api.Services;
@@ -125,6 +126,44 @@ namespace GLMS.Tests.Unit.Services
             Assert.False(await fixture.UserManager.IsInRoleAsync(updated, ApplicationRoles.LogisticsManager));
         }
 
+        //........................................................................................//
+
+        [Fact]
+        public async Task UpdateUserAsync_WhenDemotingLastActiveAdmin_Fails()
+        {
+            var fixture = CreateFixture();
+            var admin = await fixture.CreateUserAsync("admin@glms.local", "Password123!", ApplicationRoles.Admin, isActive: true);
+
+            var result = await fixture.AccountService.UpdateUserAsync(new UpdateAdminUserDto
+            {
+                UserId = admin.Id,
+                FirstName = "Only",
+                LastName = "Admin",
+                Email = "admin@glms.local",
+                Role = ApplicationRoles.LogisticsManager,
+                IsActive = true
+            });
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("At least one active admin account is required.", result.Errors);
+        }
+
+        //........................................................................................//
+
+        [Fact]
+        public async Task SetUserActiveAsync_WhenDeactivatingLastActiveAdmin_Fails()
+        {
+            var fixture = CreateFixture();
+            var admin = await fixture.CreateUserAsync("admin@glms.local", "Password123!", ApplicationRoles.Admin, isActive: true);
+
+            var result = await fixture.AccountService.SetUserActiveAsync(admin.Id, isActive: false);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("At least one active admin account is required.", result.Errors);
+        }
+
+        //........................................................................................//
+
         [Fact]
         public async Task ResetPasswordAsync_WithTemporaryPassword_UpdatesPassword()
         {
@@ -161,6 +200,7 @@ namespace GLMS.Tests.Unit.Services
                 .AddDefaultTokenProviders();
 
             services.AddScoped<IAccountService, AccountService>();
+            services.AddScoped<IUserRepository, UserRepository>();
 
             var provider = services.BuildServiceProvider();
 

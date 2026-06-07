@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using GLMS.Api.Data;
+using GLMS.Api.Data.Repositories;
 using GLMS.Api.DTOs.Auth;
 using GLMS.Api.Models;
 using GLMS.Api.Services;
@@ -104,6 +105,53 @@ namespace GLMS.Tests.Unit.Services
         //........................................................................................//
 
         [Fact]
+        public async Task UpdateProfileAsync_UpdatesNameAndEmail()
+        {
+            var fixture = CreateFixture();
+            var user = await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
+
+            var result = await fixture.AuthService.UpdateProfileAsync(CreatePrincipal(user), new UpdateProfileRequestDto
+            {
+                FirstName = "Updated",
+                LastName = "Profile",
+                Email = "updated@glms.local"
+            });
+
+            var updated = await fixture.UserManager.FindByIdAsync(user.Id);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(result.Value);
+            Assert.Equal("updated@glms.local", result.Value.Email);
+            Assert.NotNull(updated);
+            Assert.Equal("Updated", updated.FirstName);
+            Assert.Equal("Profile", updated.LastName);
+            Assert.Equal("updated@glms.local", updated.Email);
+            Assert.Equal("updated@glms.local", updated.UserName);
+        }
+
+        //........................................................................................//
+
+        [Fact]
+        public async Task UpdateProfileAsync_WithDuplicateEmail_Fails()
+        {
+            var fixture = CreateFixture();
+            var user = await fixture.CreateUserAsync("user@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
+            await fixture.CreateUserAsync("other@glms.local", "Password123!", ApplicationRoles.LogisticsManager, isActive: true);
+
+            var result = await fixture.AuthService.UpdateProfileAsync(CreatePrincipal(user), new UpdateProfileRequestDto
+            {
+                FirstName = "Test",
+                LastName = "User",
+                Email = "other@glms.local"
+            });
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("A user with this email address already exists.", result.Errors);
+        }
+
+        //........................................................................................//
+
+        [Fact]
         public async Task ChangePasswordAsync_WithValidCurrentPassword_Succeeds()
         {
             var fixture = CreateFixture();
@@ -181,6 +229,7 @@ namespace GLMS.Tests.Unit.Services
                 .AddDefaultTokenProviders();
 
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IUserRepository, UserRepository>();
 
             var provider = services.BuildServiceProvider();
             var httpContext = new DefaultHttpContext { RequestServices = provider };

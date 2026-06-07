@@ -42,8 +42,7 @@ namespace GLMS.Api.Data.Repositories
 		//gets one contract with the client info and status info
 		public async Task<Contract?> GetContractWithDetailsAsync(int contractId)
 		{
-			return await _dbSet
-				.AsNoTracking()
+			return await Query()
 				.Include(c => c.Client)
 				.Include(c => c.ContractStatus)
 				.Include(c => c.CreatedByUser)
@@ -55,8 +54,7 @@ namespace GLMS.Api.Data.Repositories
 		//gets one contract with all its documents and service requests.
 		public async Task<Contract?> GetContractWithDocumentsAndRequestsAsync(int contractId)
 		{
-			return await _dbSet
-				.AsNoTracking()
+			return await Query()
 				.Include(c => c.Client)
 				.Include(c => c.ContractStatus)
 				.Include(c => c.CreatedByUser)
@@ -126,8 +124,7 @@ namespace GLMS.Api.Data.Repositories
 
 		private IQueryable<Contract> GetContractListQuery()
 		{
-			return _dbSet
-				.AsNoTracking()
+			return Query()
 				.Include(c => c.Client)
 				.Include(c => c.ContractStatus);
 		}

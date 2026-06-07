@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -32,10 +32,11 @@ namespace GLMS.Api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    LastName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FirstName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    LastName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -215,7 +216,6 @@ namespace GLMS.Api.Migrations
                     ContractId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ClientId = table.Column<int>(type: "int", nullable: false),
-                    ContractNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Title = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
                     StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     EndDate = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -291,7 +291,6 @@ namespace GLMS.Api.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ContractId = table.Column<int>(type: "int", nullable: false),
                     RequestedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    RequestNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
                     AmountOriginal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     OriginalCurrencyCode = table.Column<string>(type: "nvarchar(3)", maxLength: 3, nullable: false),
@@ -402,12 +401,6 @@ namespace GLMS.Api.Migrations
                 column: "ClientId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Contracts_ContractNumber",
-                table: "Contracts",
-                column: "ContractNumber",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Contracts_ContractStatusId",
                 table: "Contracts",
                 column: "ContractStatusId");
@@ -426,12 +419,6 @@ namespace GLMS.Api.Migrations
                 name: "IX_ServiceRequests_RequestedByUserId",
                 table: "ServiceRequests",
                 column: "RequestedByUserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ServiceRequests_RequestNumber",
-                table: "ServiceRequests",
-                column: "RequestNumber",
-                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_ServiceRequests_ServiceRequestStatusId",
@@ -483,4 +470,3 @@ namespace GLMS.Api.Migrations
         }
     }
 }
-

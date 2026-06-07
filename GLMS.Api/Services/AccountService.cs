@@ -1,9 +1,9 @@
+using GLMS.Api.Data.Repositories;
 using GLMS.Api.DTOs.Auth;
 using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
 using GLMS.Api.Results;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 
 
@@ -11,25 +11,23 @@ namespace GLMS.Api.Services
 {
     public class AccountService : IAccountService
     {
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IUserRepository _userRepository;
 
-        public AccountService(UserManager<ApplicationUser> userManager)
+        public AccountService(IUserRepository userRepository)
         {
-            _userManager = userManager;
+            _userRepository = userRepository;
         }
 
         //..............................................................................//
 
         public async Task<IReadOnlyList<AdminUserListDto>> GetUsersAsync()
         {
-            var users = await _userManager.Users
-                .OrderBy(u => u.Email)
-                .ToListAsync();
+            var users = await _userRepository.GetUsersAsync();
 
             var result = new List<AdminUserListDto>();
             foreach (var user in users)
             {
-                var roles = await _userManager.GetRolesAsync(user);
+                var roles = await _userRepository.GetRolesAsync(user);
                 result.Add(user.ToAdminUserListDto(roles.FirstOrDefault() ?? string.Empty));
             }
 
@@ -40,13 +38,13 @@ namespace GLMS.Api.Services
 
         public async Task<AdminUserDetailDto?> GetUserForEditAsync(string userId)
         {
-            var user = await _userManager.FindByIdAsync(userId);
+            var user = await _userRepository.FindByIdAsync(userId);
             if (user == null)
             {
                 return null;
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
+            var roles = await _userRepository.GetRolesAsync(user);
             return user.ToAdminUserDetailDto(roles.FirstOrDefault() ?? ApplicationRoles.LogisticsManager);
         }
 
@@ -60,6 +58,11 @@ namespace GLMS.Api.Services
             }
 
             var email = dto.Email.Trim();
+            if (!await _userRepository.IsEmailUniqueAsync(email))
+            {
+                return AccountResult<AdminUserDetailDto>.Failed("A user with this email address already exists.");
+            }
+
             var user = new ApplicationUser
             {
                 UserName = email,
@@ -68,19 +71,14 @@ namespace GLMS.Api.Services
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 IsActive = dto.IsActive,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
 
-            var createResult = await _userManager.CreateAsync(user, dto.TemporaryPassword);
-            if (!createResult.Succeeded)
+            var result = await _userRepository.CreateUserAsync(user, dto.TemporaryPassword, dto.Role);
+            if (!result.Succeeded)
             {
-                return ToAccountResult<AdminUserDetailDto>(createResult);
-            }
-
-            var roleResult = await _userManager.AddToRoleAsync(user, dto.Role);
-            if (!roleResult.Succeeded)
-            {
-                return ToAccountResult<AdminUserDetailDto>(roleResult);
+                return ToAccountResult<AdminUserDetailDto>(result);
             }
 
             return AccountResult<AdminUserDetailDto>.Success(user.ToAdminUserDetailDto(dto.Role));
@@ -95,7 +93,7 @@ namespace GLMS.Api.Services
                 return AccountResult.Failed("The selected role is not supported.");
             }
 
-            var user = await _userManager.FindByIdAsync(dto.UserId);
+            var user = await _userRepository.FindByIdAsync(dto.UserId);
             if (user == null)
             {
                 return AccountResult.NotFound("User not found.");
@@ -111,34 +109,34 @@ namespace GLMS.Api.Services
                 return AccountResult.Failed("At least one active admin account is required.");
             }
 
+            var email = dto.Email.Trim();
+            if (!await _userRepository.IsEmailUniqueAsync(email, user.Id))
+            {
+                return AccountResult.Failed("A user with this email address already exists.");
+            }
+
             user.FirstName = dto.FirstName;
             user.LastName = dto.LastName;
-            user.Email = dto.Email.Trim();
+            user.Email = email;
             user.UserName = user.Email;
             user.IsActive = dto.IsActive;
+            user.UpdatedAt = DateTime.UtcNow;
 
-            var updateResult = await _userManager.UpdateAsync(user);
+            var updateResult = await _userRepository.UpdateUserAsync(user);
             if (!updateResult.Succeeded)
             {
                 return ToAccountResult(updateResult);
             }
 
-            var existingRoles = await _userManager.GetRolesAsync(user);
-            var removeResult = await _userManager.RemoveFromRolesAsync(user, existingRoles);
-            if (!removeResult.Succeeded)
-            {
-                return ToAccountResult(removeResult);
-            }
-
-            var addResult = await _userManager.AddToRoleAsync(user, dto.Role);
-            return addResult.Succeeded ? AccountResult.Success() : ToAccountResult(addResult);
+            var roleResult = await _userRepository.ChangeRoleAsync(user, dto.Role);
+            return roleResult.Succeeded ? AccountResult.Success() : ToAccountResult(roleResult);
         }
 
         //..............................................................................//
 
         public async Task<AccountResult> SetUserActiveAsync(string userId, bool isActive)
         {
-            var user = await _userManager.FindByIdAsync(userId);
+            var user = await _userRepository.FindByIdAsync(userId);
             if (user == null)
             {
                 return AccountResult.NotFound("User not found.");
@@ -150,7 +148,9 @@ namespace GLMS.Api.Services
             }
 
             user.IsActive = isActive;
-            var result = await _userManager.UpdateAsync(user);
+            user.UpdatedAt = DateTime.UtcNow;
+
+            var result = await _userRepository.UpdateUserAsync(user);
             return result.Succeeded ? AccountResult.Success() : ToAccountResult(result);
         }
 
@@ -158,14 +158,13 @@ namespace GLMS.Api.Services
 
         public async Task<AccountResult> ResetPasswordAsync(ResetAdminPasswordDto dto)
         {
-            var user = await _userManager.FindByIdAsync(dto.UserId);
+            var user = await _userRepository.FindByIdAsync(dto.UserId);
             if (user == null)
             {
                 return AccountResult.NotFound("User not found.");
             }
 
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var result = await _userManager.ResetPasswordAsync(user, token, dto.TemporaryPassword);
+            var result = await _userRepository.ResetPasswordAsync(user, dto.TemporaryPassword);
             return result.Succeeded ? AccountResult.Success() : ToAccountResult(result);
         }
 
@@ -180,12 +179,12 @@ namespace GLMS.Api.Services
 
         private async Task<bool> IsLastActiveAdminAsync(ApplicationUser user)
         {
-            if (!await _userManager.IsInRoleAsync(user, ApplicationRoles.Admin))
+            if (!await _userRepository.IsInRoleAsync(user, ApplicationRoles.Admin))
             {
                 return false;
             }
 
-            var activeAdmins = await _userManager.GetUsersInRoleAsync(ApplicationRoles.Admin);
+            var activeAdmins = await _userRepository.GetUsersInRoleAsync(ApplicationRoles.Admin);
             return activeAdmins.Count(u => u.IsActive) <= 1;
         }
 

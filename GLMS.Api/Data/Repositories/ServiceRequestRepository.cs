@@ -43,8 +43,7 @@ namespace GLMS.Api.Data.Repositories
         //gets one service request with all its info including the contract, status, and who requested it.
         public async Task<ServiceRequest?> GetServiceRequestWithDetailsAsync(int requestId)
         {
-            return await _dbSet
-                .AsNoTracking()
+            return await Query()
                 .Include(sr => sr.Contract)
                     .ThenInclude(c => c.Client)
                 .Include(sr => sr.ServiceRequestStatus)
@@ -93,8 +92,7 @@ namespace GLMS.Api.Data.Repositories
         //gets all service requests that a specific user created.
         public async Task<List<ServiceRequest>> GetServiceRequestsByRequestedUserAsync(string userId)
         {
-            return await _dbSet
-                .AsNoTracking()
+            return await Query()
                 .Where(sr => sr.RequestedByUserId == userId)
                 .Include(sr => sr.Contract)
                     .ThenInclude(c => c.Client)
@@ -107,8 +105,7 @@ namespace GLMS.Api.Data.Repositories
 
         private IQueryable<ServiceRequest> GetServiceRequestListQuery()
         {
-            return _dbSet
-                .AsNoTracking()
+            return Query()
                 .Include(sr => sr.Contract)
                     .ThenInclude(c => c.Client)
                 .Include(sr => sr.ServiceRequestStatus);

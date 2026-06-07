@@ -7,8 +7,8 @@ using GLMS.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
@@ -97,6 +97,7 @@ namespace GLMS.Api
 			builder.Services.AddScoped<IContractRepository, ContractRepository>();
 			builder.Services.AddScoped<IContractDocumentRepository, ContractDocumentRepository>();
 			builder.Services.AddScoped<IServiceRequestRepository, ServiceRequestRepository>();
+			builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 			// Application services
 			builder.Services.AddScoped<IAuthService, AuthService>();
@@ -217,7 +218,7 @@ namespace GLMS.Api
 			var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
 			var adminEmail = app.Configuration["SeedAdmin:Email"] ?? "admin@gmail.com";
-			var adminPassword = app.Configuration["SeedAdmin:Password"];
+			var adminPassword = app.Configuration["SeedAdmin:Password"] ?? "Admin1234!";
 
 			foreach (var role in ApplicationRoles.All)
 			{
@@ -243,7 +244,8 @@ namespace GLMS.Api
 					FirstName = "Admin",
 					LastName = "Dude",
 					IsActive = true,
-					CreatedAt = DateTime.UtcNow
+					CreatedAt = DateTime.UtcNow,
+					UpdatedAt = DateTime.UtcNow
 				};
 
 				var createResult = await userManager.CreateAsync(adminUser, adminPassword);

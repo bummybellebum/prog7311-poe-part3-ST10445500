@@ -33,8 +33,7 @@ namespace GLMS.Api.Data.Repositories
         //gets all documents that belong to a certain contract.
         public async Task<List<ContractDocument>> GetDocumentsByContractAsync(int contractId)
         {
-            return await _dbSet
-                .AsNoTracking()
+            return await Query()
                 .Where(d => d.ContractId == contractId)
                 .Include(d => d.UploadedByUser)
                 .OrderByDescending(d => d.UploadedAt)
@@ -46,8 +45,7 @@ namespace GLMS.Api.Data.Repositories
         //gets the current/latest document for a contract.
         public async Task<ContractDocument?> GetCurrentDocumentByContractAsync(int contractId)
         {
-            return await _dbSet
-                .AsNoTracking()
+            return await Query()
                 .Where(d => d.ContractId == contractId && d.IsCurrent)
                 .Include(d => d.UploadedByUser)
                 .OrderByDescending(d => d.UploadedAt)
@@ -59,8 +57,7 @@ namespace GLMS.Api.Data.Repositories
         //gets one document with all its info including the contract and who uploaded it.
         public async Task<ContractDocument?> GetDocumentWithDetailsAsync(int documentId)
         {
-            return await _dbSet
-                .AsNoTracking()
+            return await Query()
                 .Include(d => d.Contract)
                 .Include(d => d.UploadedByUser)
                 .FirstOrDefaultAsync(d => d.ContractDocumentId == documentId);
@@ -71,7 +68,7 @@ namespace GLMS.Api.Data.Repositories
         //marks current documents for a contract as no longer current.
         public async Task<int> MarkCurrentDocumentsInactiveAsync(int contractId)
         {
-            var query = _dbSet.Where(d => d.ContractId == contractId && d.IsCurrent);
+            var query = TrackedQuery().Where(d => d.ContractId == contractId && d.IsCurrent);
 
             if (_context.Database.IsRelational())
             {

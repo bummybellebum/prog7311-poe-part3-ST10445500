@@ -40,7 +40,7 @@ namespace GLMS.Api.Data.Repositories
         //gets clients for list pages, optionally searched by company name or email.
         public async Task<List<Client>> GetClientsAsync(string? search = null)
         {
-            var query = _dbSet.AsNoTracking();
+            var query = Query();
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -60,8 +60,7 @@ namespace GLMS.Api.Data.Repositories
         //gets one client and also gets all the contracts they have.
         public async Task<Client?> GetClientWithContractsAsync(int clientId)
         {
-            return await _dbSet
-                .AsNoTracking()
+            return await Query()
                 .Include(c => c.Contracts)
                     .ThenInclude(c => c.ContractStatus)
                 .FirstOrDefaultAsync(c => c.ClientId == clientId);
@@ -73,7 +72,7 @@ namespace GLMS.Api.Data.Repositories
         //if we give a client ID, it won't count that client's current name.
         public async Task<bool> IsCompanyNameUniqueAsync(string companyName, int? excludeClientId = null)
         {
-            var query = _dbSet.AsNoTracking()
+            var query = Query()
                 .Where(c => c.CompanyName.ToLower() == companyName.ToLower());
 
             if (excludeClientId.HasValue)
