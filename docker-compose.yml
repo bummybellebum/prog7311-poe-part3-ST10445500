@@ -3,6 +3,8 @@ name: st10445500-glms-stack
 services:
   sql-server-db:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    env_file:
+      - .env
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
@@ -24,6 +26,8 @@ services:
     build:
       context: .
       dockerfile: GLMS.Api/Dockerfile
+    env_file:
+      - .env
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_HTTP_PORTS: "8080"
@@ -53,6 +57,8 @@ services:
     build:
       context: .
       dockerfile: GLMS.Web/Dockerfile
+    env_file:
+      - .env
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_HTTP_PORTS: "8080"
