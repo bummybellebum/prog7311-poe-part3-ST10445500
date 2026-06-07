@@ -1,8 +1,8 @@
 <Solution>
+  <Project Path="GLMS-Stack.dcproj" Id="a28f34fb-8041-4e76-9c55-4b68d8f5e25f">
+    <Build />
+  </Project>
   <Project Path="GLMS.Api/GLMS.Api.csproj" Id="534a910d-cb44-4289-abf7-6fe70c648524" />
   <Project Path="GLMS.Tests/GLMS.Tests.csproj" Id="d53ad469-ff9d-4945-91b0-d9c4dc776d3f" />
   <Project Path="GLMS.Web/GLMS.Web.csproj" Id="9e0cb7db-ff09-45da-81f5-d1edacb86fad" />
-  <Project Path="docker-compose.dcproj" Id="a28f34fb-8041-4e76-9c55-4b68d8f5e25f">
-    <Build />
-  </Project>
 </Solution>
