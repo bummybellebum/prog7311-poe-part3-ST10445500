@@ -1,4 +1,3 @@
-using GLMS.Api.DTOs;
 using GLMS.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,8 +24,7 @@ namespace GLMS.Api.Controllers
         [HttpGet("contract-statuses")]
         public async Task<IActionResult> GetContractStatuses()
         {
-            var statuses = await _lookupService.GetContractStatusesAsync();
-            return Ok(statuses.Select(s => s.ToLookupDto()).ToList());
+            return Ok(await _lookupService.GetContractStatusLookupsAsync());
         }
 
         //..............................................................................//
@@ -34,8 +32,23 @@ namespace GLMS.Api.Controllers
         [HttpGet("service-request-statuses")]
         public async Task<IActionResult> GetServiceRequestStatuses()
         {
-            var statuses = await _lookupService.GetServiceRequestStatusesAsync();
-            return Ok(statuses.Select(s => s.ToLookupDto()).ToList());
+            return Ok(await _lookupService.GetServiceRequestStatusLookupsAsync());
+        }
+
+        //..............................................................................//
+
+        [HttpGet("clients")]
+        public async Task<IActionResult> GetClients()
+        {
+            return Ok(await _lookupService.GetClientLookupsAsync());
+        }
+
+        //..............................................................................//
+
+        [HttpGet("contracts")]
+        public async Task<IActionResult> GetContracts()
+        {
+            return Ok(await _lookupService.GetContractLookupsAsync());
         }
 
         //..............................................................................//

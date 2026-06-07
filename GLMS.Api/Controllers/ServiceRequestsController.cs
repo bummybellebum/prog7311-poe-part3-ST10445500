@@ -1,4 +1,3 @@
-using GLMS.Api.DTOs;
 using GLMS.Api.DTOs.ServiceRequests;
 using GLMS.Api.Models;
 using GLMS.Api.Services;
@@ -14,21 +13,19 @@ namespace GLMS.Api.Controllers
 {
     [ApiController]
     [Authorize(Roles = ApplicationRoles.AllRoles)]
-    [Route("api/[controller]")]
+    [Route("api/service-requests")]
+    [Route("api/servicerequests")]
     public class ServiceRequestsController : ControllerBase
     {
         private readonly IServiceRequestService _serviceRequestService;
         private readonly ICurrencyExchangeService _currencyExchangeService;
-        private readonly ICurrentUserService _currentUserService;
 
         public ServiceRequestsController(
             IServiceRequestService serviceRequestService,
-            ICurrencyExchangeService currencyExchangeService,
-            ICurrentUserService currentUserService)
+            ICurrencyExchangeService currencyExchangeService)
         {
             _serviceRequestService = serviceRequestService;
             _currencyExchangeService = currencyExchangeService;
-            _currentUserService = currentUserService;
         }
 
         //..............................................................................//
@@ -36,8 +33,7 @@ namespace GLMS.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetServiceRequests(int? contractId = null, int? statusId = null)
         {
-            var requests = await _serviceRequestService.GetAllAsync(contractId, statusId);
-            return Ok(requests.Select(r => r.ToListDto()).ToList());
+            return Ok(await _serviceRequestService.GetListAsync(contractId, statusId));
         }
 
         //..............................................................................//
@@ -45,8 +41,8 @@ namespace GLMS.Api.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetServiceRequest(int id)
         {
-            var request = await _serviceRequestService.GetDetailsAsync(id);
-            return request == null ? NotFound() : Ok(request.ToDetailDto());
+            var request = await _serviceRequestService.GetDetailDtoAsync(id);
+            return request == null ? NotFound() : Ok(request);
         }
 
         //..............................................................................//
@@ -55,21 +51,8 @@ namespace GLMS.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateServiceRequestDto dto)
         {
-            try
-            {
-                var serviceRequest = dto.ToEntity(GetUserId());
-                var created = await _serviceRequestService.CreateAsync(serviceRequest);
-                var detail = await _serviceRequestService.GetDetailsAsync(created.ServiceRequestId);
-                return CreatedAtAction(nameof(GetServiceRequest), new { id = created.ServiceRequestId }, (detail ?? created).ToDetailDto());
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
-            {
-                return BadRequest(new { errors = new[] { ex.Message } });
-            }
+            var created = await _serviceRequestService.CreateAsync(dto);
+            return CreatedAtAction(nameof(GetServiceRequest), new { id = created.ServiceRequestId }, created);
         }
 
         //..............................................................................//
@@ -78,31 +61,7 @@ namespace GLMS.Api.Controllers
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, UpdateServiceRequestDto dto)
         {
-            if (id != dto.ServiceRequestId)
-            {
-                return BadRequest(new { errors = new[] { "Service request ID does not match." } });
-            }
-
-            try
-            {
-                var serviceRequest = await _serviceRequestService.GetByIdAsync(id);
-                if (serviceRequest == null)
-                {
-                    return NotFound();
-                }
-
-                dto.ApplyTo(serviceRequest);
-                await _serviceRequestService.UpdateAsync(serviceRequest);
-                return Ok();
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
-            {
-                return BadRequest(new { errors = new[] { ex.Message } });
-            }
+            return Ok(await _serviceRequestService.UpdateAsync(id, dto));
         }
 
         //..............................................................................//
@@ -111,19 +70,7 @@ namespace GLMS.Api.Controllers
         [HttpPatch("{id:int}/status")]
         public async Task<IActionResult> UpdateStatus(int id, UpdateServiceRequestStatusDto dto)
         {
-            try
-            {
-                await _serviceRequestService.UpdateStatusAsync(id, dto.ServiceRequestStatusId);
-                return Ok();
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
-            {
-                return BadRequest(new { errors = new[] { ex.Message } });
-            }
+            return Ok(await _serviceRequestService.UpdateStatusAsync(id, dto));
         }
 
         //..............................................................................//
@@ -132,19 +79,8 @@ namespace GLMS.Api.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            try
-            {
-                await _serviceRequestService.DeleteAsync(id);
-                return NoContent();
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
-            {
-                return BadRequest(new { errors = new[] { ex.Message } });
-            }
+            await _serviceRequestService.DeleteAsync(id);
+            return NoContent();
         }
 
         //..............................................................................//
@@ -164,26 +100,11 @@ namespace GLMS.Api.Controllers
         {
             if (string.IsNullOrWhiteSpace(currencyCode))
             {
-                return BadRequest(new { errors = new[] { "Currency code is required." } });
+                throw new ArgumentException("Currency code is required.");
             }
 
-            try
-            {
-                var rate = await _currencyExchangeService.GetRateToZarAsync(currencyCode, cancellationToken);
-                return Ok(new { rate });
-            }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException || ex is HttpRequestException || ex is TaskCanceledException)
-            {
-                return BadRequest(new { errors = new[] { ex.Message } });
-            }
-        }
-
-        //..............................................................................//
-
-        private string GetUserId()
-        {
-            return _currentUserService.UserId
-                ?? throw new InvalidOperationException("Unable to identify the signed-in user.");
+            var rate = await _currencyExchangeService.GetRateToZarAsync(currencyCode, cancellationToken);
+            return Ok(new { rate });
         }
 
         //..............................................................................//

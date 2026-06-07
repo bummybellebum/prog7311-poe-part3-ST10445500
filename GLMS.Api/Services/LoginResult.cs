@@ -8,7 +8,7 @@ namespace GLMS.Api.Services
     public class LoginResult : AccountResult
     {
         private LoginResult(bool succeeded, bool isLockedOut, bool requiresTwoFactor, IReadOnlyList<string> errors)
-            : base(succeeded, errors)
+            : base(succeeded, false, errors)
         {
             IsLockedOut = isLockedOut;
             RequiresTwoFactor = requiresTwoFactor;

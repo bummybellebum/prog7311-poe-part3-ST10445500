@@ -1,4 +1,5 @@
 using GLMS.Api.DTOs.Auth;
+using GLMS.Api.Responses;
 using GLMS.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,7 +29,7 @@ namespace GLMS.Api.Controllers
         public async Task<IActionResult> Login(LoginRequestDto dto)
         {
             var result = await _authService.LoginAsync(dto);
-            return result.Succeeded ? Ok(result.Value) : Unauthorized(new { errors = result.Errors });
+            return result.Succeeded ? Ok(result.Value) : Unauthorized(new ApiErrorResponse(result.Errors));
         }
 
         //..............................................................................//
@@ -40,7 +41,7 @@ namespace GLMS.Api.Controllers
             var result = await _authService.RegisterAsync(dto);
             return result.Succeeded
                 ? CreatedAtAction(nameof(Me), new { }, result.Value)
-                : BadRequest(new { errors = result.Errors });
+                : BadRequest(new ApiErrorResponse(result.Errors));
         }
 
         //..............................................................................//
@@ -49,7 +50,7 @@ namespace GLMS.Api.Controllers
         public async Task<IActionResult> Me()
         {
             var result = await _authService.GetCurrentUserAsync(User);
-            return result.Succeeded ? Ok(result.Value) : Unauthorized(new { errors = result.Errors });
+            return result.Succeeded ? Ok(result.Value) : Unauthorized(new ApiErrorResponse(result.Errors));
         }
 
         //..............................................................................//
@@ -80,8 +81,8 @@ namespace GLMS.Api.Controllers
             }
 
             return result.IsUnauthorized
-                ? Unauthorized(new { errors = result.Errors })
-                : BadRequest(new { errors = result.Errors });
+                ? Unauthorized(new ApiErrorResponse(result.Errors))
+                : BadRequest(new ApiErrorResponse(result.Errors));
         }
 
         //..............................................................................//

@@ -1,4 +1,6 @@
 using GLMS.Api.Data.Repositories;
+using GLMS.Api.DTOs;
+using GLMS.Api.DTOs.ServiceRequests;
 using GLMS.Api.Models;
 
 //ST10445500 - PROG7311 - GLMS POE
@@ -14,11 +16,17 @@ namespace GLMS.Api.Services
         //retrieves all service requests from the database
         Task<List<ServiceRequest>> GetAllAsync(int? contractId = null, int? statusId = null);
 
+        //retrieves service request list response DTOs
+        Task<IReadOnlyList<ServiceRequestListDto>> GetListAsync(int? contractId = null, int? statusId = null);
+
         //retrieves a single service request by ID.
         Task<ServiceRequest?> GetByIdAsync(int id);
 
         //retrieves a service request with all associated details
         Task<ServiceRequest?> GetDetailsAsync(int id);
+
+        //retrieves a service request detail response DTO
+        Task<ServiceRequestDetailDto?> GetDetailDtoAsync(int id);
 
         //retrieves all service requests associated with a contract
         Task<List<ServiceRequest>> GetByContractIdAsync(int contractId);
@@ -26,11 +34,20 @@ namespace GLMS.Api.Services
         //creates a new service request record
         Task<ServiceRequest> CreateAsync(ServiceRequest serviceRequest);
 
+        //creates a new service request from a request DTO
+        Task<ServiceRequestDetailDto> CreateAsync(CreateServiceRequestDto dto);
+
         //updates an existing service request record
         Task UpdateAsync(ServiceRequest serviceRequest);
 
+        //updates an existing service request from a request DTO
+        Task<ServiceRequestDetailDto> UpdateAsync(int id, UpdateServiceRequestDto dto);
+
         //updates only the service request status
         Task UpdateStatusAsync(int id, int statusId);
+
+        //updates only the service request status from a request DTO
+        Task<ServiceRequestDetailDto> UpdateStatusAsync(int id, UpdateServiceRequestStatusDto dto);
 
         //removes a service request record from the database
         Task DeleteAsync(int id);
@@ -45,15 +62,18 @@ namespace GLMS.Api.Services
         private readonly IServiceRequestRepository _serviceRequestRepository;
         private readonly IContractRepository _contractRepository;
         private readonly ICurrencyExchangeService _currencyExchangeService;
+        private readonly ICurrentUserService? _currentUserService;
 
         public ServiceRequestService(
             IServiceRequestRepository serviceRequestRepository,
             IContractRepository contractRepository,
-            ICurrencyExchangeService currencyExchangeService)
+            ICurrencyExchangeService currencyExchangeService,
+            ICurrentUserService? currentUserService = null)
         {
             _serviceRequestRepository = serviceRequestRepository;
             _contractRepository = contractRepository;
             _currencyExchangeService = currencyExchangeService;
+            _currentUserService = currentUserService;
         }
 
         //..............................................................................//
@@ -62,6 +82,15 @@ namespace GLMS.Api.Services
         public async Task<List<ServiceRequest>> GetAllAsync(int? contractId = null, int? statusId = null)
         {
             return await _serviceRequestRepository.GetFilteredServiceRequestsAsync(contractId, statusId);
+        }
+
+        //..............................................................................//
+
+        //retrieves service request list response DTOs
+        public async Task<IReadOnlyList<ServiceRequestListDto>> GetListAsync(int? contractId = null, int? statusId = null)
+        {
+            var requests = await GetAllAsync(contractId, statusId);
+            return requests.Select(request => request.ToListDto()).ToList();
         }
 
         //..............................................................................//
@@ -84,6 +113,15 @@ namespace GLMS.Api.Services
                 return null;
 
             return await _serviceRequestRepository.GetServiceRequestWithDetailsAsync(id);
+        }
+
+        //..............................................................................//
+
+        //retrieves a service request detail response DTO
+        public async Task<ServiceRequestDetailDto?> GetDetailDtoAsync(int id)
+        {
+            var request = await GetDetailsAsync(id);
+            return request?.ToDetailDto();
         }
 
         //..............................................................................//
@@ -172,6 +210,16 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
+        //creates a new service request from a request DTO
+        public async Task<ServiceRequestDetailDto> CreateAsync(CreateServiceRequestDto dto)
+        {
+            var created = await CreateAsync(dto.ToEntity(GetCurrentUserId()));
+            var detail = await GetDetailsAsync(created.ServiceRequestId);
+            return (detail ?? created).ToDetailDto();
+        }
+
+        //..............................................................................//
+
         //updates an existing service request
         public async Task UpdateAsync(ServiceRequest serviceRequest)
         {
@@ -217,6 +265,28 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
+        //updates an existing service request from a request DTO
+        public async Task<ServiceRequestDetailDto> UpdateAsync(int id, UpdateServiceRequestDto dto)
+        {
+            if (id != dto.ServiceRequestId)
+                throw new ArgumentException("Service request ID does not match.");
+
+            var serviceRequest = await GetByIdAsync(id);
+            if (serviceRequest == null)
+                throw new KeyNotFoundException($"Service request with ID {id} not found.");
+
+            dto.ApplyTo(serviceRequest);
+            await UpdateAsync(serviceRequest);
+
+            var detail = await GetDetailsAsync(id);
+            if (detail == null)
+                throw new KeyNotFoundException($"Service request with ID {id} not found.");
+
+            return detail.ToDetailDto();
+        }
+
+        //..............................................................................//
+
         //updates only the service request status
         public async Task UpdateStatusAsync(int id, int statusId)
         {
@@ -238,6 +308,20 @@ namespace GLMS.Api.Services
         }
 
         //..............................................................................//
+
+        //updates only the service request status from a request DTO
+        public async Task<ServiceRequestDetailDto> UpdateStatusAsync(int id, UpdateServiceRequestStatusDto dto)
+        {
+            await UpdateStatusAsync(id, dto.ServiceRequestStatusId);
+
+            var detail = await GetDetailsAsync(id);
+            if (detail == null)
+                throw new KeyNotFoundException($"Service request with ID {id} not found.");
+
+            return detail.ToDetailDto();
+        }
+
+        //..............................................................................//
         
         //removes a service request record from the database
         public async Task DeleteAsync(int id)
@@ -251,6 +335,14 @@ namespace GLMS.Api.Services
 
             _serviceRequestRepository.Delete(serviceRequest);
             await _serviceRequestRepository.SaveChangesAsync();
+        }
+
+        //..............................................................................//
+
+        private string GetCurrentUserId()
+        {
+            return _currentUserService?.UserId
+                ?? throw new InvalidOperationException("Unable to identify the signed-in user.");
         }
 
         //..............................................................................//

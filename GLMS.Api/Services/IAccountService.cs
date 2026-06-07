@@ -11,7 +11,7 @@ namespace GLMS.Api.Services
     {
         Task<IReadOnlyList<AdminUserListDto>> GetUsersAsync();
         Task<AdminUserDetailDto?> GetUserForEditAsync(string userId);
-        Task<AccountResult> CreateUserAsync(CreateAdminUserDto dto);
+        Task<AccountResult<AdminUserDetailDto>> CreateUserAsync(CreateAdminUserDto dto);
         Task<AccountResult> UpdateUserAsync(UpdateAdminUserDto dto);
         Task<AccountResult> SetUserActiveAsync(string userId, bool isActive);
         Task<AccountResult> ResetPasswordAsync(ResetAdminPasswordDto dto);

@@ -1,4 +1,6 @@
 using GLMS.Api.Data.Repositories;
+using GLMS.Api.DTOs;
+using GLMS.Api.DTOs.Contracts;
 using GLMS.Api.Models;
 
 //ST10445500 - PROG7311 - GLMS POE
@@ -25,14 +27,29 @@ namespace GLMS.Api.Services
         //retrieves contracts filtered by optional status, date range, and client criteria.
         Task<List<Contract>> FilterAsync(int? statusId = null, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null);
 
+        //retrieves filtered contract response DTOs.
+        Task<IReadOnlyList<ContractListDto>> FilterDtosAsync(int? statusId = null, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null);
+
+        //retrieves a contract detail response DTO.
+        Task<ContractDetailDto?> GetDetailDtoAsync(int id);
+
         //creates a new contract record
         Task<Contract> CreateAsync(Contract contract);
+
+        //creates a new contract from a request DTO
+        Task<ContractDetailDto> CreateAsync(CreateContractDto dto);
 
         //updates an existing contract record
         Task UpdateAsync(Contract contract);
 
+        //updates an existing contract from a request DTO
+        Task<ContractDetailDto> UpdateAsync(int id, UpdateContractDto dto);
+
         //updates only the contract status
         Task UpdateStatusAsync(int id, int statusId);
+
+        //updates only the contract status from a request DTO
+        Task<ContractDetailDto> UpdateStatusAsync(int id, UpdateContractStatusDto dto);
 
         //removes a contract record from the database
         Task DeleteAsync(int id);
@@ -47,15 +64,18 @@ namespace GLMS.Api.Services
         private readonly IContractRepository _contractRepository;
         private readonly IClientRepository _clientRepository;
         private readonly IRepository<ContractStatus> _contractStatusRepository;
+        private readonly ICurrentUserService? _currentUserService;
 
         public ContractService(
             IContractRepository contractRepository,
             IClientRepository clientRepository,
-            IRepository<ContractStatus> contractStatusRepository)
+            IRepository<ContractStatus> contractStatusRepository,
+            ICurrentUserService? currentUserService = null)
         {
             _contractRepository = contractRepository;
             _clientRepository = clientRepository;
             _contractStatusRepository = contractStatusRepository;
+            _currentUserService = currentUserService;
         }
 
         //..............................................................................//
@@ -103,6 +123,28 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
+        //retrieves filtered contract response DTOs
+        public async Task<IReadOnlyList<ContractListDto>> FilterDtosAsync(
+            int? statusId = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            int? clientId = null)
+        {
+            var contracts = await FilterAsync(statusId, startDate, endDate, clientId);
+            return contracts.Select(contract => contract.ToListDto()).ToList();
+        }
+
+        //..............................................................................//
+
+        //retrieves a contract detail response DTO
+        public async Task<ContractDetailDto?> GetDetailDtoAsync(int id)
+        {
+            var contract = await GetDetailsAsync(id);
+            return contract?.ToDetailDto();
+        }
+
+        //..............................................................................//
+
         //creates a new contract, validates all fields
         public async Task<Contract> CreateAsync(Contract contract)
         {
@@ -129,6 +171,16 @@ namespace GLMS.Api.Services
             await _contractRepository.SaveChangesAsync();
 
             return contract;
+        }
+
+        //..............................................................................//
+
+        //creates a new contract from a request DTO
+        public async Task<ContractDetailDto> CreateAsync(CreateContractDto dto)
+        {
+            var created = await CreateAsync(dto.ToEntity(GetCurrentUserId()));
+            var detail = await GetDetailsAsync(created.ContractId);
+            return (detail ?? created).ToDetailDto();
         }
 
         //..............................................................................//
@@ -164,6 +216,28 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
+        //updates an existing contract from a request DTO
+        public async Task<ContractDetailDto> UpdateAsync(int id, UpdateContractDto dto)
+        {
+            if (id != dto.ContractId)
+                throw new ArgumentException("Contract ID does not match.");
+
+            var contract = await GetByIdAsync(id);
+            if (contract == null)
+                throw new KeyNotFoundException($"Contract with ID {id} not found.");
+
+            dto.ApplyTo(contract);
+            await UpdateAsync(contract);
+
+            var detail = await GetDetailsAsync(id);
+            if (detail == null)
+                throw new KeyNotFoundException($"Contract with ID {id} not found.");
+
+            return detail.ToDetailDto();
+        }
+
+        //..............................................................................//
+
         //updates only the contract status
         public async Task UpdateStatusAsync(int id, int statusId)
         {
@@ -190,6 +264,20 @@ namespace GLMS.Api.Services
         }
 
         //..............................................................................//
+
+        //updates only the contract status from a request DTO
+        public async Task<ContractDetailDto> UpdateStatusAsync(int id, UpdateContractStatusDto dto)
+        {
+            await UpdateStatusAsync(id, dto.ContractStatusId);
+
+            var detail = await GetDetailsAsync(id);
+            if (detail == null)
+                throw new KeyNotFoundException($"Contract with ID {id} not found.");
+
+            return detail.ToDetailDto();
+        }
+
+        //..............................................................................//
         
         //removes a contract record from the database
         public async Task DeleteAsync(int id)
@@ -203,6 +291,14 @@ namespace GLMS.Api.Services
 
             _contractRepository.Delete(contract);
             await _contractRepository.SaveChangesAsync();
+        }
+
+        //..............................................................................//
+
+        private string GetCurrentUserId()
+        {
+            return _currentUserService?.UserId
+                ?? throw new InvalidOperationException("Unable to identify the signed-in user.");
         }
 
         //..............................................................................//

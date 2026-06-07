@@ -1,5 +1,6 @@
 using GLMS.Api.DTOs.Auth;
 using GLMS.Api.Models;
+using GLMS.Api.Responses;
 using GLMS.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -46,7 +47,9 @@ namespace GLMS.Api.Controllers
         public async Task<IActionResult> Create(CreateAdminUserDto dto)
         {
             var result = await _accountService.CreateUserAsync(dto);
-            return result.Succeeded ? Created(string.Empty, null) : BadRequest(new { errors = result.Errors });
+            return result.Succeeded
+                ? CreatedAtAction(nameof(GetUser), new { id = result.Value!.UserId }, result.Value)
+                : ToActionResult(result);
         }
 
         //..............................................................................//
@@ -56,11 +59,17 @@ namespace GLMS.Api.Controllers
         {
             if (id != dto.UserId)
             {
-                return BadRequest(new { errors = new[] { "User ID does not match." } });
+                throw new ArgumentException("User ID does not match.");
             }
 
             var result = await _accountService.UpdateUserAsync(dto);
-            return result.Succeeded ? Ok() : BadRequest(new { errors = result.Errors });
+            if (!result.Succeeded)
+            {
+                return ToActionResult(result);
+            }
+
+            var user = await _accountService.GetUserForEditAsync(id);
+            return user == null ? NotFound(new ApiErrorResponse("User not found.")) : Ok(user);
         }
 
         //..............................................................................//
@@ -70,11 +79,11 @@ namespace GLMS.Api.Controllers
         {
             if (id != dto.UserId)
             {
-                return BadRequest(new { errors = new[] { "User ID does not match." } });
+                throw new ArgumentException("User ID does not match.");
             }
 
             var result = await _accountService.ResetPasswordAsync(dto);
-            return result.Succeeded ? Ok() : BadRequest(new { errors = result.Errors });
+            return result.Succeeded ? Ok(new { }) : ToActionResult(result);
         }
 
         //..............................................................................//
@@ -83,7 +92,22 @@ namespace GLMS.Api.Controllers
         public async Task<IActionResult> SetActive(string id, UpdateUserActiveDto dto)
         {
             var result = await _accountService.SetUserActiveAsync(id, dto.IsActive);
-            return result.Succeeded ? Ok() : BadRequest(new { errors = result.Errors });
+            if (!result.Succeeded)
+            {
+                return ToActionResult(result);
+            }
+
+            var user = await _accountService.GetUserForEditAsync(id);
+            return user == null ? NotFound(new ApiErrorResponse("User not found.")) : Ok(user);
+        }
+
+        //..............................................................................//
+
+        private IActionResult ToActionResult(AccountResult result)
+        {
+            return result.IsNotFound
+                ? NotFound(new ApiErrorResponse(result.Errors))
+                : BadRequest(new ApiErrorResponse(result.Errors));
         }
 
         //..............................................................................//

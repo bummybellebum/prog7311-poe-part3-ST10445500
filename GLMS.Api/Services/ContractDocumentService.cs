@@ -1,4 +1,6 @@
 using GLMS.Api.Data.Repositories;
+using GLMS.Api.DTOs;
+using GLMS.Api.DTOs.Documents;
 using GLMS.Api.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -17,8 +19,14 @@ namespace GLMS.Api.Services
         //retrieves a document by ID.
         Task<ContractDocument?> GetByIdAsync(int id);
 
+        //retrieves a document response DTO by ID.
+        Task<ContractDocumentDto?> GetDtoByIdAsync(int id);
+
         //retrieves all documents associated with a contract.
         Task<List<ContractDocument>> GetByContractIdAsync(int contractId);
+
+        //retrieves document response DTOs associated with a contract.
+        Task<IReadOnlyList<ContractDocumentDto>> GetDtosByContractIdAsync(int contractId);
 
         //retrieves the current active document for a contract.
         Task<ContractDocument?> GetCurrentByContractIdAsync(int contractId);
@@ -26,14 +34,26 @@ namespace GLMS.Api.Services
         //creates a new contract document record.
         Task<ContractDocument> CreateAsync(ContractDocument document);
 
+        //creates a new contract document record from a request DTO.
+        Task<ContractDocumentDto> CreateAsync(int contractId, CreateContractDocumentDto dto);
+
         //updates an existing document record.
         Task UpdateAsync(ContractDocument document);
+
+        //updates an existing document record from a request DTO.
+        Task<ContractDocumentDto> UpdateAsync(int documentId, UpdateContractDocumentDto dto);
 
         //removes a document record from the database.
         Task DeleteAsync(int id);
 
         //uploads a signed agreement PDF and creates a document record.
         Task<ContractDocument> UploadSignedAgreementAsync(int contractId, IFormFile file, string uploadedByUserId);
+
+        //uploads a signed agreement PDF and returns a response DTO.
+        Task<ContractDocumentDto> UploadSignedAgreementDtoAsync(int contractId, IFormFile file);
+
+        //uploads a signed agreement PDF and returns a response DTO.
+        Task<ContractDocumentDto> UploadSignedAgreementDtoAsync(int contractId, IFormFile file, string uploadedByUserId);
 
         //gets the physical file info needed to download a signed agreement.
         Task<SignedAgreementDownloadResult?> GetSignedAgreementDownloadAsync(int documentId);
@@ -51,17 +71,20 @@ namespace GLMS.Api.Services
         private readonly IContractRepository _contractRepository;
         private readonly IWebHostEnvironment _environment;
         private readonly IConfiguration _configuration;
+        private readonly ICurrentUserService? _currentUserService;
 
         public ContractDocumentService(
             IContractDocumentRepository documentRepository,
             IContractRepository contractRepository,
             IWebHostEnvironment environment,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ICurrentUserService? currentUserService = null)
         {
             _documentRepository = documentRepository;
             _contractRepository = contractRepository;
             _environment = environment;
             _configuration = configuration;
+            _currentUserService = currentUserService;
         }
 
         //..............................................................................//
@@ -77,6 +100,15 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
+        //retrieves a document response DTO by ID
+        public async Task<ContractDocumentDto?> GetDtoByIdAsync(int id)
+        {
+            var document = await GetByIdAsync(id);
+            return document?.ToDto();
+        }
+
+        //..............................................................................//
+
         //retrieves all documents associated with a contract.
         public async Task<List<ContractDocument>> GetByContractIdAsync(int contractId)
         {
@@ -88,6 +120,15 @@ namespace GLMS.Api.Services
                 return new List<ContractDocument>();
 
             return await _documentRepository.GetDocumentsByContractAsync(contractId);
+        }
+
+        //..............................................................................//
+
+        //retrieves document response DTOs associated with a contract
+        public async Task<IReadOnlyList<ContractDocumentDto>> GetDtosByContractIdAsync(int contractId)
+        {
+            var documents = await GetByContractIdAsync(contractId);
+            return documents.Select(document => document.ToDto()).ToList();
         }
 
         //..............................................................................//
@@ -144,6 +185,18 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
+        //creates a new contract document record from a request DTO
+        public async Task<ContractDocumentDto> CreateAsync(int contractId, CreateContractDocumentDto dto)
+        {
+            if (contractId != dto.ContractId)
+                throw new ArgumentException("Contract ID does not match.");
+
+            var created = await CreateAsync(dto.ToEntity());
+            return created.ToDto();
+        }
+
+        //..............................................................................//
+
         //updates an existing document record
         public async Task UpdateAsync(ContractDocument document)
         {
@@ -159,6 +212,24 @@ namespace GLMS.Api.Services
 
             _documentRepository.Update(document);
             await _documentRepository.SaveChangesAsync();
+        }
+
+        //..............................................................................//
+
+        //updates an existing document record from a request DTO
+        public async Task<ContractDocumentDto> UpdateAsync(int documentId, UpdateContractDocumentDto dto)
+        {
+            if (documentId != dto.ContractDocumentId)
+                throw new ArgumentException("Document ID does not match.");
+
+            var document = await GetByIdAsync(documentId);
+            if (document == null)
+                throw new KeyNotFoundException($"Document with ID {documentId} not found.");
+
+            dto.ApplyTo(document);
+            await UpdateAsync(document);
+
+            return document.ToDto();
         }
 
         //..............................................................................//
@@ -230,6 +301,23 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
+        //uploads a signed agreement PDF and returns a response DTO
+        public async Task<ContractDocumentDto> UploadSignedAgreementDtoAsync(int contractId, IFormFile file)
+        {
+            return await UploadSignedAgreementDtoAsync(contractId, file, GetCurrentUserId());
+        }
+
+        //..............................................................................//
+
+        //uploads a signed agreement PDF and returns a response DTO
+        public async Task<ContractDocumentDto> UploadSignedAgreementDtoAsync(int contractId, IFormFile file, string uploadedByUserId)
+        {
+            var created = await UploadSignedAgreementAsync(contractId, file, uploadedByUserId);
+            return created.ToDto();
+        }
+
+        //..............................................................................//
+
         //resolves the stored document path for downloading.
         public async Task<SignedAgreementDownloadResult?> GetSignedAgreementDownloadAsync(int documentId)
         {
@@ -281,6 +369,14 @@ namespace GLMS.Api.Services
 
             if (!hasPdfHeader)
                 throw new ArgumentException("Only valid PDF files are allowed for signed agreements.", nameof(file));
+        }
+
+        //..............................................................................//
+
+        private string GetCurrentUserId()
+        {
+            return _currentUserService?.UserId
+                ?? throw new InvalidOperationException("Unable to identify the signed-in user.");
         }
 
         //..............................................................................//

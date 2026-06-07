@@ -1,14 +1,18 @@
 using GLMS.Api.Data;
 using GLMS.Api.Data.Repositories;
+using GLMS.Api.Filters;
 using GLMS.Api.Models;
+using GLMS.Api.Responses;
 using GLMS.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace GLMS.Api
@@ -59,6 +63,23 @@ namespace GLMS.Api
 					ValidAudience = builder.Configuration["Jwt:Audience"],
 					IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
 				};
+
+				options.Events = new JwtBearerEvents
+				{
+					OnChallenge = async context =>
+					{
+						context.HandleResponse();
+						context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+						context.Response.ContentType = "application/json";
+						await context.Response.WriteAsync(JsonSerializer.Serialize(new ApiErrorResponse("Authentication is required.")));
+					},
+					OnForbidden = async context =>
+					{
+						context.Response.StatusCode = StatusCodes.Status403Forbidden;
+						context.Response.ContentType = "application/json";
+						await context.Response.WriteAsync(JsonSerializer.Serialize(new ApiErrorResponse("You do not have permission to access this resource.")));
+					}
+				};
 			});
 
 			builder.Services.AddAuthorization(options =>
@@ -100,11 +121,27 @@ namespace GLMS.Api
 			builder.Services.AddControllers(options =>
 				{
 					options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+					options.Filters.Add<ApiExceptionFilter>();
 				})
 				.AddJsonOptions(options =>
 				{
 					options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
 				});
+
+			builder.Services.Configure<ApiBehaviorOptions>(options =>
+			{
+				options.InvalidModelStateResponseFactory = context =>
+				{
+					var errors = context.ModelState.Values
+						.SelectMany(value => value.Errors)
+						.Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
+							? "The request is invalid."
+							: error.ErrorMessage)
+						.ToArray();
+
+					return new BadRequestObjectResult(new ApiErrorResponse(errors));
+				};
+			});
 
 			builder.Services.AddEndpointsApiExplorer();
 

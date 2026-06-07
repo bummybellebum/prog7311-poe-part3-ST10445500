@@ -1,4 +1,3 @@
-using GLMS.Api.DTOs;
 using GLMS.Api.DTOs.Clients;
 using GLMS.Api.Models;
 using GLMS.Api.Services;
@@ -29,8 +28,7 @@ namespace GLMS.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetClients(string? search = null)
         {
-            var clients = await _clientService.GetAllAsync(search);
-            return Ok(clients.Select(c => c.ToListDto()).ToList());
+            return Ok(await _clientService.GetListAsync(search));
         }
 
         //..............................................................................//
@@ -38,8 +36,8 @@ namespace GLMS.Api.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetClient(int id)
         {
-            var client = await _clientService.GetWithContractsAsync(id);
-            return client == null ? NotFound() : Ok(client.ToDetailDto());
+            var client = await _clientService.GetDetailDtoAsync(id);
+            return client == null ? NotFound() : Ok(client);
         }
 
         //..............................................................................//
@@ -48,16 +46,8 @@ namespace GLMS.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateClientDto dto)
         {
-            try
-            {
-                var client = dto.ToEntity();
-                var created = await _clientService.CreateAsync(client);
-                return CreatedAtAction(nameof(GetClient), new { id = created.ClientId }, created.ToListDto());
-            }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
-            {
-                return BadRequest(new { errors = new[] { ex.Message } });
-            }
+            var created = await _clientService.CreateAsync(dto);
+            return CreatedAtAction(nameof(GetClient), new { id = created.ClientId }, created);
         }
 
         //..............................................................................//
@@ -66,31 +56,7 @@ namespace GLMS.Api.Controllers
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, UpdateClientDto dto)
         {
-            if (id != dto.ClientId)
-            {
-                return BadRequest(new { errors = new[] { "Client ID does not match." } });
-            }
-
-            try
-            {
-                var client = await _clientService.GetByIdAsync(id);
-                if (client == null)
-                {
-                    return NotFound();
-                }
-
-                dto.ApplyTo(client);
-                await _clientService.UpdateAsync(client);
-                return Ok();
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
-            {
-                return BadRequest(new { errors = new[] { ex.Message } });
-            }
+            return Ok(await _clientService.UpdateAsync(id, dto));
         }
 
         //..............................................................................//
@@ -99,19 +65,8 @@ namespace GLMS.Api.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            try
-            {
-                await _clientService.DeleteAsync(id);
-                return NoContent();
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
-            {
-                return BadRequest(new { errors = new[] { ex.Message } });
-            }
+            await _clientService.DeleteAsync(id);
+            return NoContent();
         }
 
         //..............................................................................//

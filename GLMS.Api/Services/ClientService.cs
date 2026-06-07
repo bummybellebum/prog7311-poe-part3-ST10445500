@@ -1,4 +1,6 @@
 using GLMS.Api.Data.Repositories;
+using GLMS.Api.DTOs;
+using GLMS.Api.DTOs.Clients;
 using GLMS.Api.Models;
 
 //ST10445500 - PROG7311 - GLMS POE
@@ -14,17 +16,29 @@ namespace GLMS.Api.Services
         //retrieves all clients from the database
         Task<List<Client>> GetAllAsync(string? search = null);
 
+        //retrieves client list response DTOs
+        Task<IReadOnlyList<ClientListDto>> GetListAsync(string? search = null);
+
         //retrieves a single client by ID
         Task<Client?> GetByIdAsync(int id);
 
         //retrieves a client with all associated contracts
         Task<Client?> GetWithContractsAsync(int id);
 
+        //retrieves a client detail response DTO
+        Task<ClientDetailDto?> GetDetailDtoAsync(int id);
+
         //creates a new client record
         Task<Client> CreateAsync(Client client);
 
+        //creates a new client from a request DTO
+        Task<ClientListDto> CreateAsync(CreateClientDto dto);
+
         //updates an existing client record
         Task UpdateAsync(Client client);
+
+        //updates an existing client from a request DTO
+        Task<ClientDetailDto> UpdateAsync(int id, UpdateClientDto dto);
 
         //removes a client record from the database
         Task DeleteAsync(int id);
@@ -53,6 +67,15 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
+        //retrieves client list response DTOs
+        public async Task<IReadOnlyList<ClientListDto>> GetListAsync(string? search = null)
+        {
+            var clients = await GetAllAsync(search);
+            return clients.Select(client => client.ToListDto()).ToList();
+        }
+
+        //..............................................................................//
+
         //retrieves a single client by ID. returns null if invalid or not found
         public async Task<Client?> GetByIdAsync(int id)
         {
@@ -71,6 +94,15 @@ namespace GLMS.Api.Services
                 return null;
 
             return await _clientRepository.GetClientWithContractsAsync(id);
+        }
+
+        //..............................................................................//
+
+        //retrieves a client detail response DTO
+        public async Task<ClientDetailDto?> GetDetailDtoAsync(int id)
+        {
+            var client = await GetWithContractsAsync(id);
+            return client?.ToDetailDto();
         }
 
         //..............................................................................//
@@ -102,6 +134,15 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
+        //creates a new client from a request DTO
+        public async Task<ClientListDto> CreateAsync(CreateClientDto dto)
+        {
+            var created = await CreateAsync(dto.ToEntity());
+            return created.ToListDto();
+        }
+
+        //..............................................................................//
+
         //updates an existing client, validates all fields and ensures company name uniqueness
         public async Task UpdateAsync(Client client)
         {
@@ -129,6 +170,28 @@ namespace GLMS.Api.Services
 
             _clientRepository.Update(client);
             await _clientRepository.SaveChangesAsync();
+        }
+
+        //..............................................................................//
+
+        //updates an existing client from a request DTO
+        public async Task<ClientDetailDto> UpdateAsync(int id, UpdateClientDto dto)
+        {
+            if (id != dto.ClientId)
+                throw new ArgumentException("Client ID does not match.");
+
+            var client = await GetByIdAsync(id);
+            if (client == null)
+                throw new KeyNotFoundException($"Client with ID {id} not found.");
+
+            dto.ApplyTo(client);
+            await UpdateAsync(client);
+
+            var detail = await GetWithContractsAsync(id);
+            if (detail == null)
+                throw new KeyNotFoundException($"Client with ID {id} not found.");
+
+            return detail.ToDetailDto();
         }
 
         //..............................................................................//

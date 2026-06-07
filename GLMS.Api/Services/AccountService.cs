@@ -70,11 +70,11 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        public async Task<AccountResult> CreateUserAsync(CreateAdminUserDto dto)
+        public async Task<AccountResult<AdminUserDetailDto>> CreateUserAsync(CreateAdminUserDto dto)
         {
             if (!IsSupportedRole(dto.Role))
             {
-                return AccountResult.Failed("The selected role is not supported.");
+                return AccountResult<AdminUserDetailDto>.Failed("The selected role is not supported.");
             }
 
             var email = dto.Email.Trim();
@@ -92,16 +92,24 @@ namespace GLMS.Api.Services
             var createResult = await _userManager.CreateAsync(user, dto.TemporaryPassword);
             if (!createResult.Succeeded)
             {
-                return ToAccountResult(createResult);
+                return ToAccountResult<AdminUserDetailDto>(createResult);
             }
 
             var roleResult = await _userManager.AddToRoleAsync(user, dto.Role);
             if (!roleResult.Succeeded)
             {
-                return ToAccountResult(roleResult);
+                return ToAccountResult<AdminUserDetailDto>(roleResult);
             }
 
-            return AccountResult.Success();
+            return AccountResult<AdminUserDetailDto>.Success(new AdminUserDetailDto
+            {
+                UserId = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email ?? string.Empty,
+                Role = dto.Role,
+                IsActive = user.IsActive
+            });
         }
 
         //..............................................................................//
@@ -116,7 +124,7 @@ namespace GLMS.Api.Services
             var user = await _userManager.FindByIdAsync(dto.UserId);
             if (user == null)
             {
-                return AccountResult.Failed("User not found.");
+                return AccountResult.NotFound("User not found.");
             }
 
             if (!dto.IsActive && await IsLastActiveAdminAsync(user))
@@ -159,7 +167,7 @@ namespace GLMS.Api.Services
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
             {
-                return AccountResult.Failed("User not found.");
+                return AccountResult.NotFound("User not found.");
             }
 
             if (!isActive && await IsLastActiveAdminAsync(user))
@@ -179,7 +187,7 @@ namespace GLMS.Api.Services
             var user = await _userManager.FindByIdAsync(dto.UserId);
             if (user == null)
             {
-                return AccountResult.Failed("User not found.");
+                return AccountResult.NotFound("User not found.");
             }
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
@@ -212,6 +220,13 @@ namespace GLMS.Api.Services
         private static AccountResult ToAccountResult(IdentityResult result)
         {
             return AccountResult.Failed(result.Errors.Select(e => e.Description));
+        }
+
+        //..............................................................................//
+
+        private static AccountResult<T> ToAccountResult<T>(IdentityResult result)
+        {
+            return AccountResult<T>.Failed(result.Errors.Select(e => e.Description));
         }
 
         //..............................................................................//
