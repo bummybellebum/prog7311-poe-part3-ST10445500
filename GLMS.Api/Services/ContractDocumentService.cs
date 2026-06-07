@@ -2,7 +2,6 @@ using GLMS.Api.Data.Repositories;
 using GLMS.Api.DTOs.Documents;
 using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
-using GLMS.Api.Results;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -11,51 +10,36 @@ using Microsoft.Extensions.Configuration;
 
 namespace GLMS.Api.Services
 {
+    public record SignedAgreementDownloadResult(string PhysicalPath, string ContentType, string FileName);
+
+    //..............................................................................//
+
     //manages business logic for Contract Documents
     public interface IContractDocumentService
     {
-        //retrieves a document by ID.
-        Task<ContractDocument?> GetByIdAsync(int id);
+        //retrieves document response DTOs associated with a contract
+        Task<IReadOnlyList<ContractDocumentDto>> GetContractDocumentsAsync(int contractId);
 
-        //retrieves a document response DTO by ID.
-        Task<ContractDocumentDto?> GetDtoByIdAsync(int id);
+        //retrieves a document response DTO by ID
+        Task<ContractDocumentDto?> GetContractDocumentAsync(int id);
 
-        //retrieves all documents associated with a contract.
-        Task<List<ContractDocument>> GetByContractIdAsync(int contractId);
+        //creates a new contract document record from a request DTO
+        Task<ContractDocumentDto> CreateContractDocumentAsync(int contractId, CreateContractDocumentDto dto);
 
-        //retrieves document response DTOs associated with a contract.
-        Task<IReadOnlyList<ContractDocumentDto>> GetDtosByContractIdAsync(int contractId);
+        //updates an existing document record from a request DTO
+        Task<ContractDocumentDto> UpdateContractDocumentAsync(int documentId, UpdateContractDocumentDto dto);
 
-        //retrieves the current active document for a contract.
-        Task<ContractDocument?> GetCurrentByContractIdAsync(int contractId);
+        //removes a document record from the database
+        Task DeleteContractDocumentAsync(int id);
 
-        //creates a new contract document record.
-        Task<ContractDocument> CreateAsync(ContractDocument document);
+        //uploads a signed agreement PDF and returns a response DTO
+        Task<ContractDocumentDto> UploadSignedAgreementAsync(int contractId, IFormFile file);
 
-        //creates a new contract document record from a request DTO.
-        Task<ContractDocumentDto> CreateAsync(int contractId, CreateContractDocumentDto dto);
-
-        //updates an existing document record.
-        Task UpdateAsync(ContractDocument document);
-
-        //updates an existing document record from a request DTO.
-        Task<ContractDocumentDto> UpdateAsync(int documentId, UpdateContractDocumentDto dto);
-
-        //removes a document record from the database.
-        Task DeleteAsync(int id);
-
-        //uploads a signed agreement PDF and creates a document record.
-        Task<ContractDocument> UploadSignedAgreementAsync(int contractId, IFormFile file, string uploadedByUserId);
-
-        //uploads a signed agreement PDF and returns a response DTO.
-        Task<ContractDocumentDto> UploadSignedAgreementDtoAsync(int contractId, IFormFile file);
-
-        //uploads a signed agreement PDF and returns a response DTO.
-        Task<ContractDocumentDto> UploadSignedAgreementDtoAsync(int contractId, IFormFile file, string uploadedByUserId);
-
-        //gets the physical file info needed to download a signed agreement.
+        //gets the physical file info needed to download a signed agreement
         Task<SignedAgreementDownloadResult?> GetSignedAgreementDownloadAsync(int documentId);
     }
+
+    //..............................................................................//
 
     //implements business logic for managing Contract Documents
     //validates data and coordinates with the repository layer
@@ -83,28 +67,106 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        //retrieves a document by ID
-        public async Task<ContractDocument?> GetByIdAsync(int id)
+        //retrieves document response DTOs associated with a contract
+        public async Task<IReadOnlyList<ContractDocumentDto>> GetContractDocumentsAsync(int contractId)
         {
-            if (id <= 0)
-                return null;
-
-            return await _documentRepository.GetByIdAsync(id);
+            var documents = await GetDocumentsByContractIdAsync(contractId);
+            return documents.Select(document => document.ToDto()).ToList();
         }
 
         //..............................................................................//
 
         //retrieves a document response DTO by ID
-        public async Task<ContractDocumentDto?> GetDtoByIdAsync(int id)
+        public async Task<ContractDocumentDto?> GetContractDocumentAsync(int id)
         {
-            var document = await GetByIdAsync(id);
+            if (id <= 0)
+                return null;
+
+            var document = await _documentRepository.GetByIdAsync(id);
             return document?.ToDto();
         }
 
         //..............................................................................//
 
-        //retrieves all documents associated with a contract.
-        public async Task<List<ContractDocument>> GetByContractIdAsync(int contractId)
+        //creates a new contract document record from a request DTO
+        public async Task<ContractDocumentDto> CreateContractDocumentAsync(int contractId, CreateContractDocumentDto dto)
+        {
+            if (contractId != dto.ContractId)
+                throw new ArgumentException("Contract ID does not match.");
+
+            var created = await CreateDocumentRecordAsync(dto.ToEntity());
+            return created.ToDto();
+        }
+
+        //..............................................................................//
+
+        //updates an existing document record from a request DTO
+        public async Task<ContractDocumentDto> UpdateContractDocumentAsync(int documentId, UpdateContractDocumentDto dto)
+        {
+            if (documentId != dto.ContractDocumentId)
+                throw new ArgumentException("Document ID does not match.");
+
+            var document = await _documentRepository.GetByIdAsync(documentId);
+            if (document == null)
+                throw new KeyNotFoundException($"Document with ID {documentId} not found.");
+
+            dto.ApplyTo(document);
+            await UpdateDocumentRecordAsync(document);
+
+            return document.ToDto();
+        }
+
+        //..............................................................................//
+
+        //removes a document record from the database
+        public async Task DeleteContractDocumentAsync(int id)
+        {
+            if (id <= 0)
+                throw new ArgumentException("Invalid document ID.", nameof(id));
+
+            var document = await _documentRepository.GetByIdAsync(id);
+            if (document == null)
+                throw new KeyNotFoundException($"Document with ID {id} not found.");
+
+            _documentRepository.Delete(document);
+            await _documentRepository.SaveChangesAsync();
+        }
+
+        //..............................................................................//
+
+        //uploads a signed agreement PDF and returns a response DTO
+        public async Task<ContractDocumentDto> UploadSignedAgreementAsync(int contractId, IFormFile file)
+        {
+            var created = await UploadSignedAgreementRecordAsync(contractId, file, GetCurrentUserId());
+            return created.ToDto();
+        }
+
+        //..............................................................................//
+
+        //resolves the stored document path for downloading
+        public async Task<SignedAgreementDownloadResult?> GetSignedAgreementDownloadAsync(int documentId)
+        {
+            if (documentId <= 0)
+                return null;
+
+            var document = await _documentRepository.GetByIdAsync(documentId);
+            if (document == null)
+                return null;
+
+            var physicalPath = ResolvePhysicalPath(document);
+            if (physicalPath == null)
+                return null;
+
+            return new SignedAgreementDownloadResult(
+                physicalPath,
+                string.IsNullOrWhiteSpace(document.ContentType) ? "application/pdf" : document.ContentType,
+                string.IsNullOrWhiteSpace(document.OriginalFileName) ? "signed-agreement.pdf" : document.OriginalFileName);
+        }
+
+        //..............................................................................//
+
+        //retrieves all documents associated with a contract
+        private async Task<List<ContractDocument>> GetDocumentsByContractIdAsync(int contractId)
         {
             if (contractId <= 0)
                 return new List<ContractDocument>();
@@ -118,47 +180,10 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        //retrieves document response DTOs associated with a contract
-        public async Task<IReadOnlyList<ContractDocumentDto>> GetDtosByContractIdAsync(int contractId)
+        //creates a new document record after validation
+        private async Task<ContractDocument> CreateDocumentRecordAsync(ContractDocument document)
         {
-            var documents = await GetByContractIdAsync(contractId);
-            return documents.Select(document => document.ToDto()).ToList();
-        }
-
-        //..............................................................................//
-
-        //retrieves the current active document for a contract
-        public async Task<ContractDocument?> GetCurrentByContractIdAsync(int contractId)
-        {
-            if (contractId <= 0)
-                return null;
-
-            var contract = await _contractRepository.GetByIdAsync(contractId);
-            if (contract == null)
-                return null;
-
-            return await _documentRepository.GetCurrentDocumentByContractAsync(contractId);
-        }
-
-        //..............................................................................//
-
-        //creates a new document record. all fields are required
-        public async Task<ContractDocument> CreateAsync(ContractDocument document)
-        {
-            if (document == null)
-                throw new ArgumentNullException(nameof(document));
-
-            if (document.ContractId <= 0)
-                throw new ArgumentException("Valid contract ID is required.", nameof(document.ContractId));
-
-            if (string.IsNullOrWhiteSpace(document.OriginalFileName))
-                throw new ArgumentException("Original file name is required.", nameof(document.OriginalFileName));
-
-            if (string.IsNullOrWhiteSpace(document.StoredFileName))
-                throw new ArgumentException("Stored file name is required.", nameof(document.StoredFileName));
-
-            if (string.IsNullOrWhiteSpace(document.FilePath))
-                throw new ArgumentException("File path is required.", nameof(document.FilePath));
+            ValidateDocument(document);
 
             var contract = await _contractRepository.GetByIdAsync(document.ContractId);
             if (contract == null)
@@ -179,30 +204,13 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        //creates a new contract document record from a request DTO
-        public async Task<ContractDocumentDto> CreateAsync(int contractId, CreateContractDocumentDto dto)
+        //updates an existing document record after validation
+        private async Task UpdateDocumentRecordAsync(ContractDocument document)
         {
-            if (contractId != dto.ContractId)
-                throw new ArgumentException("Contract ID does not match.");
-
-            var created = await CreateAsync(dto.ToEntity());
-            return created.ToDto();
-        }
-
-        //..............................................................................//
-
-        //updates an existing document record
-        public async Task UpdateAsync(ContractDocument document)
-        {
-            if (document == null)
-                throw new ArgumentNullException(nameof(document));
+            ValidateDocument(document);
 
             if (document.ContractDocumentId <= 0)
                 throw new ArgumentException("Invalid document ID.", nameof(document.ContractDocumentId));
-
-            var existing = await _documentRepository.GetByIdAsync(document.ContractDocumentId);
-            if (existing == null)
-                throw new KeyNotFoundException($"Document with ID {document.ContractDocumentId} not found.");
 
             _documentRepository.Update(document);
             await _documentRepository.SaveChangesAsync();
@@ -210,42 +218,8 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        //updates an existing document record from a request DTO
-        public async Task<ContractDocumentDto> UpdateAsync(int documentId, UpdateContractDocumentDto dto)
-        {
-            if (documentId != dto.ContractDocumentId)
-                throw new ArgumentException("Document ID does not match.");
-
-            var document = await GetByIdAsync(documentId);
-            if (document == null)
-                throw new KeyNotFoundException($"Document with ID {documentId} not found.");
-
-            dto.ApplyTo(document);
-            await UpdateAsync(document);
-
-            return document.ToDto();
-        }
-
-        //..............................................................................//
-
-        //removes a document record from the database
-        public async Task DeleteAsync(int id)
-        {
-            if (id <= 0)
-                throw new ArgumentException("Invalid document ID.", nameof(id));
-
-            var document = await _documentRepository.GetByIdAsync(id);
-            if (document == null)
-                throw new KeyNotFoundException($"Document with ID {id} not found.");
-
-            _documentRepository.Delete(document);
-            await _documentRepository.SaveChangesAsync();
-        }
-
-        //..............................................................................//
-
-        //uploads a signed agreement PDF, saves it to disk, and stores metadata only.
-        public async Task<ContractDocument> UploadSignedAgreementAsync(int contractId, IFormFile file, string uploadedByUserId)
+        //uploads a signed agreement PDF, saves it to disk, and stores metadata only
+        private async Task<ContractDocument> UploadSignedAgreementRecordAsync(int contractId, IFormFile file, string uploadedByUserId)
         {
             if (contractId <= 0)
                 throw new ArgumentException("Valid contract ID is required.", nameof(contractId));
@@ -280,7 +254,7 @@ namespace GLMS.Api.Services
 
             try
             {
-                return await CreateAsync(document);
+                return await CreateDocumentRecordAsync(document);
             }
             catch
             {
@@ -295,45 +269,28 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        //uploads a signed agreement PDF and returns a response DTO
-        public async Task<ContractDocumentDto> UploadSignedAgreementDtoAsync(int contractId, IFormFile file)
+        //checks the required document fields
+        private static void ValidateDocument(ContractDocument document)
         {
-            return await UploadSignedAgreementDtoAsync(contractId, file, GetCurrentUserId());
-        }
-
-        //..............................................................................//
-
-        //uploads a signed agreement PDF and returns a response DTO
-        public async Task<ContractDocumentDto> UploadSignedAgreementDtoAsync(int contractId, IFormFile file, string uploadedByUserId)
-        {
-            var created = await UploadSignedAgreementAsync(contractId, file, uploadedByUserId);
-            return created.ToDto();
-        }
-
-        //..............................................................................//
-
-        //resolves the stored document path for downloading.
-        public async Task<SignedAgreementDownloadResult?> GetSignedAgreementDownloadAsync(int documentId)
-        {
-            if (documentId <= 0)
-                return null;
-
-            var document = await _documentRepository.GetByIdAsync(documentId);
             if (document == null)
-                return null;
+                throw new ArgumentNullException(nameof(document));
 
-            var physicalPath = ResolvePhysicalPath(document);
-            if (physicalPath == null)
-                return null;
+            if (document.ContractId <= 0)
+                throw new ArgumentException("Valid contract ID is required.", nameof(document.ContractId));
 
-            return new SignedAgreementDownloadResult(
-                physicalPath,
-                string.IsNullOrWhiteSpace(document.ContentType) ? "application/pdf" : document.ContentType,
-                string.IsNullOrWhiteSpace(document.OriginalFileName) ? "signed-agreement.pdf" : document.OriginalFileName);
+            if (string.IsNullOrWhiteSpace(document.OriginalFileName))
+                throw new ArgumentException("Original file name is required.", nameof(document.OriginalFileName));
+
+            if (string.IsNullOrWhiteSpace(document.StoredFileName))
+                throw new ArgumentException("Stored file name is required.", nameof(document.StoredFileName));
+
+            if (string.IsNullOrWhiteSpace(document.FilePath))
+                throw new ArgumentException("File path is required.", nameof(document.FilePath));
         }
 
         //..............................................................................//
 
+        //checks that the uploaded file is a PDF
         private async Task ValidatePdfFileAsync(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -515,4 +472,3 @@ namespace GLMS.Api.Services
         //..............................................................................//
     }
 }
-

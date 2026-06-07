@@ -8,14 +8,8 @@ namespace GLMS.Api.Services
     //manages lookup data for statuses and reference information
     public interface ILookupService
     {
-        //retrieves all available contract statuses
-        Task<List<ContractStatus>> GetContractStatusesAsync();
-
         //retrieves contract status lookup DTOs
         Task<IReadOnlyList<LookupDto>> GetContractStatusLookupsAsync();
-
-        //retrieves all available service request statuses
-        Task<List<ServiceRequestStatus>> GetServiceRequestStatusesAsync();
 
         //retrieves service request status lookup DTOs
         Task<IReadOnlyList<LookupDto>> GetServiceRequestStatusLookupsAsync();
@@ -52,27 +46,11 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        //retrieves all available contract statuses
-        public async Task<List<ContractStatus>> GetContractStatusesAsync()
-        {
-            return await _contractStatusRepository.GetAllAsync();
-        }
-
-        //..............................................................................//
-
         //retrieves contract status lookup DTOs
         public async Task<IReadOnlyList<LookupDto>> GetContractStatusLookupsAsync()
         {
             var statuses = await GetContractStatusesAsync();
             return statuses.Select(status => status.ToLookupDto()).ToList();
-        }
-
-        //..............................................................................//
-
-        //retrieves all available service request statuses
-        public async Task<List<ServiceRequestStatus>> GetServiceRequestStatusesAsync()
-        {
-            return await _serviceRequestStatusRepository.GetAllAsync();
         }
 
         //..............................................................................//
@@ -110,6 +88,22 @@ namespace GLMS.Api.Services
             return contracts
                 .Select(contract => contract.ToLookupDto())
                 .ToList();
+        }
+
+        //..............................................................................//
+
+        //retrieves all available contract statuses
+        private async Task<List<ContractStatus>> GetContractStatusesAsync()
+        {
+            return await _contractStatusRepository.GetAllAsync();
+        }
+
+        //..............................................................................//
+
+        //retrieves all available service request statuses
+        private async Task<List<ServiceRequestStatus>> GetServiceRequestStatusesAsync()
+        {
+            return await _serviceRequestStatusRepository.GetAllAsync();
         }
 
         //..............................................................................//

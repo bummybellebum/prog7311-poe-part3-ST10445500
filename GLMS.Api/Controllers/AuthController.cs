@@ -1,6 +1,5 @@
 using GLMS.Api.DTOs.Auth;
 using GLMS.Api.Responses;
-using GLMS.Api.Results;
 using GLMS.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

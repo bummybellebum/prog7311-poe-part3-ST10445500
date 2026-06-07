@@ -8,7 +8,7 @@ namespace GLMS.Tests.Unit.Services
     public class LookupServiceTests
     {
         [Fact]
-        public async Task GetContractStatusesAsync_ReturnsStatusesFromRepository()
+        public async Task GetContractStatusLookupsAsync_ReturnsStatusLookupsFromRepository()
         {
             // Arrange
             var contractStatusRepository = new Mock<IRepository<ContractStatus>>();
@@ -21,15 +21,16 @@ namespace GLMS.Tests.Unit.Services
             var service = new LookupService(contractStatusRepository.Object, serviceRequestStatusRepository.Object);
 
             // Act
-            var result = await service.GetContractStatusesAsync();
+            var result = await service.GetContractStatusLookupsAsync();
 
             // Assert
             Assert.Single(result);
-            Assert.Equal("Active", result[0].StatusName);
+            Assert.Equal(2, result[0].Id);
+            Assert.Equal("Active", result[0].Name);
         }
 
         [Fact]
-        public async Task GetServiceRequestStatusesAsync_ReturnsStatusesFromRepository()
+        public async Task GetServiceRequestStatusLookupsAsync_ReturnsStatusLookupsFromRepository()
         {
             // Arrange
             var contractStatusRepository = new Mock<IRepository<ContractStatus>>();
@@ -42,11 +43,12 @@ namespace GLMS.Tests.Unit.Services
             var service = new LookupService(contractStatusRepository.Object, serviceRequestStatusRepository.Object);
 
             // Act
-            var result = await service.GetServiceRequestStatusesAsync();
+            var result = await service.GetServiceRequestStatusLookupsAsync();
 
             // Assert
             Assert.Single(result);
-            Assert.Equal("Pending", result[0].StatusName);
+            Assert.Equal(1, result[0].Id);
+            Assert.Equal("Pending", result[0].Name);
         }
     }
 }

@@ -2,13 +2,72 @@ using GLMS.Api.Data.Repositories;
 using GLMS.Api.DTOs.Auth;
 using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
-using GLMS.Api.Results;
 using Microsoft.AspNetCore.Identity;
 
 
 
 namespace GLMS.Api.Services
 {
+    //manages admin user account actions
+    public interface IAccountService
+    {
+        Task<IReadOnlyList<AdminUserListDto>> GetUsersAsync();
+        Task<AdminUserDetailDto?> GetUserForEditAsync(string userId);
+        Task<AccountResult<AdminUserDetailDto>> CreateUserAsync(CreateAdminUserDto dto);
+        Task<AccountResult> UpdateUserAsync(UpdateAdminUserDto dto);
+        Task<AccountResult> SetUserActiveAsync(string userId, bool isActive);
+        Task<AccountResult> ResetPasswordAsync(ResetAdminPasswordDto dto);
+    }
+
+    //..............................................................................//
+
+    //simple result returned by account service methods
+    public class AccountResult
+    {
+        protected AccountResult(bool succeeded, bool isNotFound, IReadOnlyList<string> errors)
+        {
+            Succeeded = succeeded;
+            IsNotFound = isNotFound;
+            Errors = errors;
+        }
+
+        public bool Succeeded { get; }
+        public bool IsNotFound { get; }
+        public IReadOnlyList<string> Errors { get; }
+
+        public static AccountResult Success() => new(true, false, []);
+
+        public static AccountResult Failed(params string[] errors) => new(false, false, errors);
+
+        public static AccountResult Failed(IEnumerable<string> errors) => new(false, false, errors.ToList());
+
+        public static AccountResult NotFound(params string[] errors) => new(false, true, errors);
+    }
+
+    //..............................................................................//
+
+    //simple result returned by account service methods that include a value
+    public class AccountResult<T> : AccountResult
+    {
+        private AccountResult(bool succeeded, bool isNotFound, T? value, IReadOnlyList<string> errors)
+            : base(succeeded, isNotFound, errors)
+        {
+            Value = value;
+        }
+
+        public T? Value { get; }
+
+        public static AccountResult<T> Success(T value) => new(true, false, value, []);
+
+        public static new AccountResult<T> Failed(params string[] errors) => new(false, false, default, errors);
+
+        public static new AccountResult<T> Failed(IEnumerable<string> errors) => new(false, false, default, errors.ToList());
+
+        public static new AccountResult<T> NotFound(params string[] errors) => new(false, true, default, errors);
+    }
+
+    //..............................................................................//
+
     public class AccountService : IAccountService
     {
         private readonly IUserRepository _userRepository;

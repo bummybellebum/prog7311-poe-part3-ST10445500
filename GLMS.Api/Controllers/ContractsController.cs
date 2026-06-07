@@ -34,7 +34,7 @@ namespace GLMS.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetContracts(int? statusId = null, DateTime? startDate = null, DateTime? endDate = null, int? clientId = null)
         {
-            return Ok(await _contractService.FilterDtosAsync(statusId, startDate, endDate, clientId));
+            return Ok(await _contractService.GetContractsAsync(statusId, startDate, endDate, clientId));
         }
 
         //..............................................................................//
@@ -42,7 +42,7 @@ namespace GLMS.Api.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetContract(int id)
         {
-            var contract = await _contractService.GetDetailDtoAsync(id);
+            var contract = await _contractService.GetContractAsync(id);
             return contract == null ? NotFound() : Ok(contract);
         }
 
@@ -52,7 +52,7 @@ namespace GLMS.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateContractDto dto)
         {
-            var created = await _contractService.CreateAsync(dto);
+            var created = await _contractService.CreateContractAsync(dto);
             return CreatedAtAction(nameof(GetContract), new { id = created.ContractId }, created);
         }
 
@@ -62,7 +62,7 @@ namespace GLMS.Api.Controllers
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, UpdateContractDto dto)
         {
-            return Ok(await _contractService.UpdateAsync(id, dto));
+            return Ok(await _contractService.UpdateContractAsync(id, dto));
         }
 
         //..............................................................................//
@@ -71,7 +71,7 @@ namespace GLMS.Api.Controllers
         [HttpPatch("{id:int}/status")]
         public async Task<IActionResult> UpdateStatus(int id, UpdateContractStatusDto dto)
         {
-            return Ok(await _contractService.UpdateStatusAsync(id, dto));
+            return Ok(await _contractService.UpdateContractStatusAsync(id, dto));
         }
 
         //..............................................................................//
@@ -80,7 +80,7 @@ namespace GLMS.Api.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _contractService.DeleteAsync(id);
+            await _contractService.DeleteContractAsync(id);
             return NoContent();
         }
 
@@ -89,7 +89,7 @@ namespace GLMS.Api.Controllers
         [HttpGet("{contractId:int}/documents")]
         public async Task<IActionResult> GetDocuments(int contractId)
         {
-            return Ok(await _contractDocumentService.GetDtosByContractIdAsync(contractId));
+            return Ok(await _contractDocumentService.GetContractDocumentsAsync(contractId));
         }
 
         //..............................................................................//
@@ -97,7 +97,7 @@ namespace GLMS.Api.Controllers
         [HttpGet("documents/{documentId:int}")]
         public async Task<IActionResult> GetDocument(int documentId)
         {
-            var document = await _contractDocumentService.GetDtoByIdAsync(documentId);
+            var document = await _contractDocumentService.GetContractDocumentAsync(documentId);
             return document == null ? NotFound() : Ok(document);
         }
 
@@ -107,7 +107,7 @@ namespace GLMS.Api.Controllers
         [HttpPost("{contractId:int}/documents")]
         public async Task<IActionResult> CreateDocument(int contractId, CreateContractDocumentDto dto)
         {
-            var created = await _contractDocumentService.CreateAsync(contractId, dto);
+            var created = await _contractDocumentService.CreateContractDocumentAsync(contractId, dto);
             return CreatedAtAction(nameof(GetDocument), new { documentId = created.ContractDocumentId }, created);
         }
 
@@ -117,7 +117,7 @@ namespace GLMS.Api.Controllers
         [HttpPut("documents/{documentId:int}")]
         public async Task<IActionResult> UpdateDocument(int documentId, UpdateContractDocumentDto dto)
         {
-            return Ok(await _contractDocumentService.UpdateAsync(documentId, dto));
+            return Ok(await _contractDocumentService.UpdateContractDocumentAsync(documentId, dto));
         }
 
         //..............................................................................//
@@ -126,7 +126,7 @@ namespace GLMS.Api.Controllers
         [HttpDelete("documents/{documentId:int}")]
         public async Task<IActionResult> DeleteDocument(int documentId)
         {
-            await _contractDocumentService.DeleteAsync(documentId);
+            await _contractDocumentService.DeleteContractDocumentAsync(documentId);
             return NoContent();
         }
 
@@ -136,7 +136,7 @@ namespace GLMS.Api.Controllers
         [HttpPost("{contractId:int}/signed-agreement")]
         public async Task<IActionResult> UploadSignedAgreement(int contractId, IFormFile file)
         {
-            var created = await _contractDocumentService.UploadSignedAgreementDtoAsync(contractId, file);
+            var created = await _contractDocumentService.UploadSignedAgreementAsync(contractId, file);
             return CreatedAtAction(nameof(GetDocument), new { documentId = created.ContractDocumentId }, created);
         }
 

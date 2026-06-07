@@ -14,7 +14,6 @@ namespace GLMS.Api.Controllers
     [ApiController]
     [Authorize(Roles = ApplicationRoles.AllRoles)]
     [Route("api/service-requests")]
-    [Route("api/servicerequests")]
     public class ServiceRequestsController : ControllerBase
     {
         private readonly IServiceRequestService _serviceRequestService;
@@ -33,7 +32,7 @@ namespace GLMS.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetServiceRequests(int? contractId = null, int? statusId = null)
         {
-            return Ok(await _serviceRequestService.GetListAsync(contractId, statusId));
+            return Ok(await _serviceRequestService.GetServiceRequestsAsync(contractId, statusId));
         }
 
         //..............................................................................//
@@ -41,7 +40,7 @@ namespace GLMS.Api.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetServiceRequest(int id)
         {
-            var request = await _serviceRequestService.GetDetailDtoAsync(id);
+            var request = await _serviceRequestService.GetServiceRequestAsync(id);
             return request == null ? NotFound() : Ok(request);
         }
 
@@ -51,7 +50,7 @@ namespace GLMS.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateServiceRequestDto dto)
         {
-            var created = await _serviceRequestService.CreateAsync(dto);
+            var created = await _serviceRequestService.CreateServiceRequestAsync(dto);
             return CreatedAtAction(nameof(GetServiceRequest), new { id = created.ServiceRequestId }, created);
         }
 
@@ -61,7 +60,7 @@ namespace GLMS.Api.Controllers
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, UpdateServiceRequestDto dto)
         {
-            return Ok(await _serviceRequestService.UpdateAsync(id, dto));
+            return Ok(await _serviceRequestService.UpdateServiceRequestAsync(id, dto));
         }
 
         //..............................................................................//
@@ -70,7 +69,7 @@ namespace GLMS.Api.Controllers
         [HttpPatch("{id:int}/status")]
         public async Task<IActionResult> UpdateStatus(int id, UpdateServiceRequestStatusDto dto)
         {
-            return Ok(await _serviceRequestService.UpdateStatusAsync(id, dto));
+            return Ok(await _serviceRequestService.UpdateServiceRequestStatusAsync(id, dto));
         }
 
         //..............................................................................//
@@ -79,7 +78,7 @@ namespace GLMS.Api.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _serviceRequestService.DeleteAsync(id);
+            await _serviceRequestService.DeleteServiceRequestAsync(id);
             return NoContent();
         }
 

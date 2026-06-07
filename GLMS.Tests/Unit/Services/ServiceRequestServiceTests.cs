@@ -1,4 +1,5 @@
 using GLMS.Api.Data.Repositories;
+using GLMS.Api.DTOs.ServiceRequests;
 using GLMS.Api.Models;
 using GLMS.Api.Services;
 using Moq;
@@ -8,14 +9,13 @@ namespace GLMS.Tests.Unit.Services
     public class ServiceRequestServiceTests
     {
         [Fact]
-        public async Task CreateAsync_ThrowsInvalidOperationException_WhenContractIsOnHold()
+        public async Task CreateServiceRequestAsync_ThrowsInvalidOperationException_WhenContractIsOnHold()
         {
             // Arrange
-            var serviceRequestRepository = new Mock<IServiceRequestRepository>();
-            var contractRepository = new Mock<IContractRepository>();
-            var currencyExchangeService = new Mock<ICurrencyExchangeService>();
-
-            var service = new ServiceRequestService(serviceRequestRepository.Object, contractRepository.Object, currencyExchangeService.Object);
+            var service = CreateService(
+                out var serviceRequestRepository,
+                out var contractRepository,
+                out _);
             var request = CreateValidRequest();
 
             contractRepository
@@ -23,7 +23,7 @@ namespace GLMS.Tests.Unit.Services
                 .ReturnsAsync(CreateContractWithStatus(ContractStatusConstants.OnHoldName));
 
             // Act
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(request));
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateServiceRequestAsync(request));
 
             // Assert
             Assert.Equal("Cannot create a service request for a contract that is on hold.", exception.Message);
@@ -31,14 +31,13 @@ namespace GLMS.Tests.Unit.Services
         }
 
         [Fact]
-        public async Task CreateAsync_ThrowsInvalidOperationException_WhenContractIsExpired()
+        public async Task CreateServiceRequestAsync_ThrowsInvalidOperationException_WhenContractIsExpired()
         {
             // Arrange
-            var serviceRequestRepository = new Mock<IServiceRequestRepository>();
-            var contractRepository = new Mock<IContractRepository>();
-            var currencyExchangeService = new Mock<ICurrencyExchangeService>();
-
-            var service = new ServiceRequestService(serviceRequestRepository.Object, contractRepository.Object, currencyExchangeService.Object);
+            var service = CreateService(
+                out var serviceRequestRepository,
+                out var contractRepository,
+                out _);
             var request = CreateValidRequest();
 
             contractRepository
@@ -46,7 +45,7 @@ namespace GLMS.Tests.Unit.Services
                 .ReturnsAsync(CreateContractWithStatus(ContractStatusConstants.ExpiredName));
 
             // Act
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(request));
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateServiceRequestAsync(request));
 
             // Assert
             Assert.Equal("Cannot create a service request for an expired contract.", exception.Message);
@@ -54,14 +53,13 @@ namespace GLMS.Tests.Unit.Services
         }
 
         [Fact]
-        public async Task CreateAsync_CreatesServiceRequest_WhenContractIsActive()
+        public async Task CreateServiceRequestAsync_CreatesServiceRequest_WhenContractIsActive()
         {
             // Arrange
-            var serviceRequestRepository = new Mock<IServiceRequestRepository>();
-            var contractRepository = new Mock<IContractRepository>();
-            var currencyExchangeService = new Mock<ICurrencyExchangeService>();
-
-            var service = new ServiceRequestService(serviceRequestRepository.Object, contractRepository.Object, currencyExchangeService.Object);
+            var service = CreateService(
+                out var serviceRequestRepository,
+                out var contractRepository,
+                out var currencyExchangeService);
             var request = CreateValidRequest();
 
             contractRepository
@@ -73,25 +71,26 @@ namespace GLMS.Tests.Unit.Services
                 .ReturnsAsync(18.50m);
 
             // Act
-            var result = await service.CreateAsync(request);
+            var result = await service.CreateServiceRequestAsync(request);
 
             // Assert
             Assert.Equal("USD", result.OriginalCurrencyCode);
             Assert.Equal(18.50m, result.ExchangeRateToZAR);
             Assert.Equal(1850.00m, result.AmountZAR);
-            serviceRequestRepository.Verify(r => r.AddAsync(It.Is<ServiceRequest>(sr => sr == request)), Times.Once);
+            serviceRequestRepository.Verify(r => r.AddAsync(It.Is<ServiceRequest>(sr =>
+                sr.ContractId == request.ContractId &&
+                sr.RequestedByUserId == "user-1")), Times.Once);
             serviceRequestRepository.Verify(r => r.SaveChangesAsync(), Times.Once);
         }
 
         [Fact]
-        public async Task CreateAsync_RoundsConvertedAmountToTwoDecimals()
+        public async Task CreateServiceRequestAsync_RoundsConvertedAmountToTwoDecimals()
         {
             // Arrange
-            var serviceRequestRepository = new Mock<IServiceRequestRepository>();
-            var contractRepository = new Mock<IContractRepository>();
-            var currencyExchangeService = new Mock<ICurrencyExchangeService>();
-
-            var service = new ServiceRequestService(serviceRequestRepository.Object, contractRepository.Object, currencyExchangeService.Object);
+            var service = CreateService(
+                out _,
+                out var contractRepository,
+                out var currencyExchangeService);
             var request = CreateValidRequest();
             request.AmountOriginal = 123.45m;
             request.OriginalCurrencyCode = "eur";
@@ -105,7 +104,7 @@ namespace GLMS.Tests.Unit.Services
                 .ReturnsAsync(20.123456m);
 
             // Act
-            var result = await service.CreateAsync(request);
+            var result = await service.CreateServiceRequestAsync(request);
 
             // Assert
             Assert.Equal("EUR", result.OriginalCurrencyCode);
@@ -113,14 +112,13 @@ namespace GLMS.Tests.Unit.Services
         }
 
         [Fact]
-        public async Task CreateAsync_ThrowsInvalidOperationException_WhenContractIsDraft()
+        public async Task CreateServiceRequestAsync_ThrowsInvalidOperationException_WhenContractIsDraft()
         {
             // Arrange
-            var serviceRequestRepository = new Mock<IServiceRequestRepository>();
-            var contractRepository = new Mock<IContractRepository>();
-            var currencyExchangeService = new Mock<ICurrencyExchangeService>();
-
-            var service = new ServiceRequestService(serviceRequestRepository.Object, contractRepository.Object, currencyExchangeService.Object);
+            var service = CreateService(
+                out var serviceRequestRepository,
+                out var contractRepository,
+                out _);
             var request = CreateValidRequest();
 
             contractRepository
@@ -128,7 +126,7 @@ namespace GLMS.Tests.Unit.Services
                 .ReturnsAsync(CreateContractWithStatus(ContractStatusConstants.DraftName));
 
             // Act
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(request));
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateServiceRequestAsync(request));
 
             // Assert
             Assert.Equal("Service requests can only be created for active contracts. This contract status is: Draft", exception.Message);
@@ -136,14 +134,13 @@ namespace GLMS.Tests.Unit.Services
         }
 
         [Fact]
-        public async Task CreateAsync_ThrowsInvalidOperationException_WhenContractStatusIsMissing()
+        public async Task CreateServiceRequestAsync_ThrowsInvalidOperationException_WhenContractStatusIsMissing()
         {
             // Arrange
-            var serviceRequestRepository = new Mock<IServiceRequestRepository>();
-            var contractRepository = new Mock<IContractRepository>();
-            var currencyExchangeService = new Mock<ICurrencyExchangeService>();
-
-            var service = new ServiceRequestService(serviceRequestRepository.Object, contractRepository.Object, currencyExchangeService.Object);
+            var service = CreateService(
+                out var serviceRequestRepository,
+                out var contractRepository,
+                out _);
             var request = CreateValidRequest();
 
             contractRepository
@@ -151,19 +148,37 @@ namespace GLMS.Tests.Unit.Services
                 .ReturnsAsync(CreateContractWithoutStatus());
 
             // Act
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(request));
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateServiceRequestAsync(request));
 
             // Assert
             Assert.Equal("Service requests can only be created for active contracts. This contract status is: Unknown", exception.Message);
             serviceRequestRepository.Verify(r => r.AddAsync(It.IsAny<ServiceRequest>()), Times.Never);
         }
 
-        private static ServiceRequest CreateValidRequest()
+        private static ServiceRequestService CreateService(
+            out Mock<IServiceRequestRepository> serviceRequestRepository,
+            out Mock<IContractRepository> contractRepository,
+            out Mock<ICurrencyExchangeService> currencyExchangeService)
         {
-            return new ServiceRequest
+            serviceRequestRepository = new Mock<IServiceRequestRepository>();
+            contractRepository = new Mock<IContractRepository>();
+            currencyExchangeService = new Mock<ICurrencyExchangeService>();
+
+            var currentUserService = new Mock<ICurrentUserService>();
+            currentUserService.Setup(s => s.UserId).Returns("user-1");
+
+            return new ServiceRequestService(
+                serviceRequestRepository.Object,
+                contractRepository.Object,
+                currencyExchangeService.Object,
+                currentUserService.Object);
+        }
+
+        private static CreateServiceRequestDto CreateValidRequest()
+        {
+            return new CreateServiceRequestDto
             {
                 ContractId = 1,
-                RequestedByUserId = "user-1",
                 Description = "Need additional support services",
                 AmountOriginal = 100m,
                 OriginalCurrencyCode = "usd",
@@ -205,4 +220,3 @@ namespace GLMS.Tests.Unit.Services
         }
     }
 }
-

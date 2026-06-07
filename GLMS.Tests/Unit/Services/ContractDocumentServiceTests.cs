@@ -1,4 +1,5 @@
 using GLMS.Api.Data.Repositories;
+using GLMS.Api.DTOs.Documents;
 using GLMS.Api.Models;
 using GLMS.Api.Services;
 using Microsoft.AspNetCore.Hosting;
@@ -11,29 +12,21 @@ namespace GLMS.Tests.Unit.Services
     public class ContractDocumentServiceTests
     {
         [Fact]
-        public async Task CreateAsync_ThrowsKeyNotFoundException_WhenContractDoesNotExist()
+        public async Task CreateContractDocumentAsync_ThrowsKeyNotFoundException_WhenContractDoesNotExist()
         {
             // Arrange
             var documentRepository = new Mock<IContractDocumentRepository>();
             var contractRepository = new Mock<IContractRepository>();
             contractRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync((Contract?)null);
             var service = CreateService(documentRepository, contractRepository);
-            var document = new ContractDocument
-            {
-                ContractId = 1,
-                DocumentType = "Signed Agreement",
-                OriginalFileName = "contract.pdf",
-                StoredFileName = "contract-1.pdf",
-                FilePath = "uploads/contract-1.pdf",
-                UploadedByUserId = "user-1"
-            };
+            var document = CreateDocumentDto();
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => service.CreateAsync(document));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => service.CreateContractDocumentAsync(1, document));
         }
 
         [Fact]
-        public async Task CreateAsync_AddsDocument_WhenInputIsValid()
+        public async Task CreateContractDocumentAsync_AddsDocument_WhenInputIsValid()
         {
             // Arrange
             var documentRepository = new Mock<IContractDocumentRepository>();
@@ -41,23 +34,17 @@ namespace GLMS.Tests.Unit.Services
             documentRepository.Setup(r => r.MarkCurrentDocumentsInactiveAsync(1)).ReturnsAsync(1);
             contractRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateContract());
             var service = CreateService(documentRepository, contractRepository);
-            var document = new ContractDocument
-            {
-                ContractId = 1,
-                DocumentType = "Signed Agreement",
-                OriginalFileName = "contract.pdf",
-                StoredFileName = "contract-1.pdf",
-                FilePath = "uploads/contract-1.pdf",
-                UploadedByUserId = "user-1"
-            };
+            var document = CreateDocumentDto();
 
             // Act
-            var result = await service.CreateAsync(document);
+            var result = await service.CreateContractDocumentAsync(1, document);
 
             // Assert
             Assert.Equal("contract.pdf", result.OriginalFileName);
             documentRepository.Verify(r => r.MarkCurrentDocumentsInactiveAsync(1), Times.Once);
-            documentRepository.Verify(r => r.AddAsync(document), Times.Once);
+            documentRepository.Verify(r => r.AddAsync(It.Is<ContractDocument>(saved =>
+                saved.ContractId == 1 &&
+                saved.OriginalFileName == "contract.pdf")), Times.Once);
             documentRepository.Verify(r => r.SaveChangesAsync(), Times.Once);
         }
 
@@ -72,7 +59,7 @@ namespace GLMS.Tests.Unit.Services
             var file = CreateFormFile("agreement.pdf", "application/pdf", CreatePdfBytes());
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UploadSignedAgreementAsync(1, file, "user-1"));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UploadSignedAgreementAsync(1, file));
         }
 
         [Fact]
@@ -86,7 +73,7 @@ namespace GLMS.Tests.Unit.Services
             var file = CreateFormFile("agreement.pdf", "application/pdf", []);
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => service.UploadSignedAgreementAsync(1, file, "user-1"));
+            await Assert.ThrowsAsync<ArgumentException>(() => service.UploadSignedAgreementAsync(1, file));
         }
 
         [Fact]
@@ -100,7 +87,7 @@ namespace GLMS.Tests.Unit.Services
             var file = CreateFormFile("agreement.exe", "application/octet-stream", CreatePdfBytes());
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => service.UploadSignedAgreementAsync(1, file, "user-1"));
+            await Assert.ThrowsAsync<ArgumentException>(() => service.UploadSignedAgreementAsync(1, file));
         }
 
         [Fact]
@@ -114,7 +101,7 @@ namespace GLMS.Tests.Unit.Services
             var file = CreateFormFile("agreement.pdf", "application/pdf", "MZ fake exe"u8.ToArray());
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => service.UploadSignedAgreementAsync(1, file, "user-1"));
+            await Assert.ThrowsAsync<ArgumentException>(() => service.UploadSignedAgreementAsync(1, file));
         }
 
         [Fact]
@@ -138,7 +125,7 @@ namespace GLMS.Tests.Unit.Services
                 var file = CreateFormFile("signed agreement.pdf", "application/pdf", CreatePdfBytes());
 
                 // Act
-                var result = await service.UploadSignedAgreementAsync(1, file, "user-1");
+                var result = await service.UploadSignedAgreementAsync(1, file);
 
                 // Assert
                 Assert.NotNull(savedDocument);
@@ -160,16 +147,16 @@ namespace GLMS.Tests.Unit.Services
         }
 
         [Fact]
-        public async Task GetSignedAgreementDownloadAsync_ReturnsFile_WhenRelativeLegacyPathExists()
+        public async Task GetSignedAgreementDownloadAsync_ReturnsFile_WhenRelativePathExists()
         {
             // Arrange
             var tempRoot = CreateTempRoot();
             try
             {
-                var legacyFolder = Path.Combine(tempRoot, "uploads");
-                Directory.CreateDirectory(legacyFolder);
-                var legacyPath = Path.Combine(legacyFolder, "legacy.pdf");
-                await File.WriteAllBytesAsync(legacyPath, CreatePdfBytes());
+                var uploadFolder = Path.Combine(tempRoot, "uploads");
+                Directory.CreateDirectory(uploadFolder);
+                var filePath = Path.Combine(uploadFolder, "agreement.pdf");
+                await File.WriteAllBytesAsync(filePath, CreatePdfBytes());
 
                 var documentRepository = new Mock<IContractDocumentRepository>();
                 var contractRepository = new Mock<IContractRepository>();
@@ -178,9 +165,9 @@ namespace GLMS.Tests.Unit.Services
                     ContractDocumentId = 5,
                     ContractId = 1,
                     DocumentType = "Signed Agreement",
-                    OriginalFileName = "legacy.pdf",
-                    StoredFileName = "legacy.pdf",
-                    FilePath = "uploads/legacy.pdf",
+                    OriginalFileName = "agreement.pdf",
+                    StoredFileName = "agreement.pdf",
+                    FilePath = "uploads/agreement.pdf",
                     ContentType = "application/pdf",
                     UploadedByUserId = "user-1"
                 });
@@ -192,9 +179,9 @@ namespace GLMS.Tests.Unit.Services
 
                 // Assert
                 Assert.NotNull(result);
-                Assert.Equal(Path.GetFullPath(legacyPath), result.PhysicalPath);
+                Assert.Equal(Path.GetFullPath(filePath), result.PhysicalPath);
                 Assert.Equal("application/pdf", result.ContentType);
-                Assert.Equal("legacy.pdf", result.FileName);
+                Assert.Equal("agreement.pdf", result.FileName);
             }
             finally
             {
@@ -245,11 +232,28 @@ namespace GLMS.Tests.Unit.Services
                 })
                 .Build();
 
+            var currentUserService = new Mock<ICurrentUserService>();
+            currentUserService.Setup(s => s.UserId).Returns("user-1");
+
             return new ContractDocumentService(
                 documentRepository.Object,
                 contractRepository.Object,
                 environment.Object,
-                configuration);
+                configuration,
+                currentUserService.Object);
+        }
+
+        private static CreateContractDocumentDto CreateDocumentDto()
+        {
+            return new CreateContractDocumentDto
+            {
+                ContractId = 1,
+                DocumentType = "Signed Agreement",
+                OriginalFileName = "contract.pdf",
+                StoredFileName = "contract-1.pdf",
+                FilePath = "uploads/contract-1.pdf",
+                UploadedByUserId = "user-1"
+            };
         }
 
         private static Contract CreateContract()

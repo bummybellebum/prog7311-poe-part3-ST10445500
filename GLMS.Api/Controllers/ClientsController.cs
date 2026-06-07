@@ -28,7 +28,7 @@ namespace GLMS.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetClients(string? search = null)
         {
-            return Ok(await _clientService.GetListAsync(search));
+            return Ok(await _clientService.GetClientsAsync(search));
         }
 
         //..............................................................................//
@@ -36,7 +36,7 @@ namespace GLMS.Api.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetClient(int id)
         {
-            var client = await _clientService.GetDetailDtoAsync(id);
+            var client = await _clientService.GetClientAsync(id);
             return client == null ? NotFound() : Ok(client);
         }
 
@@ -46,7 +46,7 @@ namespace GLMS.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateClientDto dto)
         {
-            var created = await _clientService.CreateAsync(dto);
+            var created = await _clientService.CreateClientAsync(dto);
             return CreatedAtAction(nameof(GetClient), new { id = created.ClientId }, created);
         }
 
@@ -56,7 +56,7 @@ namespace GLMS.Api.Controllers
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, UpdateClientDto dto)
         {
-            return Ok(await _clientService.UpdateAsync(id, dto));
+            return Ok(await _clientService.UpdateClientAsync(id, dto));
         }
 
         //..............................................................................//
@@ -65,7 +65,7 @@ namespace GLMS.Api.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _clientService.DeleteAsync(id);
+            await _clientService.DeleteClientAsync(id);
             return NoContent();
         }
 

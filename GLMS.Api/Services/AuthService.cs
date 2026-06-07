@@ -5,7 +5,6 @@ using GLMS.Api.Data.Repositories;
 using GLMS.Api.DTOs.Auth;
 using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
-using GLMS.Api.Results;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 
@@ -13,6 +12,45 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace GLMS.Api.Services
 {
+    //manages login, registration, and signed-in user account actions
+    public interface IAuthService
+    {
+        Task<AuthServiceResult<AuthResponseDto>> LoginAsync(LoginRequestDto dto);
+        Task<AuthServiceResult<RegisterResponseDto>> RegisterAsync(RegisterRequestDto dto);
+        Task<AuthServiceResult<AuthResponseDto>> GetCurrentUserAsync(ClaimsPrincipal principal);
+        Task<AuthServiceResult<AuthResponseDto>> UpdateProfileAsync(ClaimsPrincipal principal, UpdateProfileRequestDto dto);
+        Task<AuthServiceResult<object>> ChangePasswordAsync(ClaimsPrincipal principal, ChangePasswordRequestDto dto);
+    }
+
+    //..............................................................................//
+
+    //simple result returned by auth service methods
+    public class AuthServiceResult<T>
+    {
+        private AuthServiceResult(bool succeeded, bool isUnauthorized, T? value, IReadOnlyList<string> errors)
+        {
+            Succeeded = succeeded;
+            IsUnauthorized = isUnauthorized;
+            Value = value;
+            Errors = errors;
+        }
+
+        public bool Succeeded { get; }
+        public bool IsUnauthorized { get; }
+        public T? Value { get; }
+        public IReadOnlyList<string> Errors { get; }
+
+        public static AuthServiceResult<T> Success(T value) => new(true, false, value, []);
+
+        public static AuthServiceResult<T> Failed(params string[] errors) => new(false, false, default, errors);
+
+        public static AuthServiceResult<T> Failed(IEnumerable<string> errors) => new(false, false, default, errors.ToList());
+
+        public static AuthServiceResult<T> Unauthorized(params string[] errors) => new(false, true, default, errors);
+    }
+
+    //..............................................................................//
+
     public class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;

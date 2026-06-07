@@ -9,6 +9,15 @@ using Microsoft.AspNetCore.Identity;
 
 namespace GLMS.Api.Services
 {
+    public interface ICurrentUserService
+    {
+        string? UserId { get; }
+        string? UserName { get; }
+        ClaimsPrincipal? User { get; }
+    }
+
+    //..............................................................................//
+
     public class CurrentUserService : ICurrentUserService
     {
         private readonly IHttpContextAccessor _httpContextAccessor;

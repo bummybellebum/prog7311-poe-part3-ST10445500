@@ -10,44 +10,23 @@ namespace GLMS.Api.Services
     //manages business logic for Service Requests
     public interface IServiceRequestService
     {
-        //retrieves all service requests from the database
-        Task<List<ServiceRequest>> GetAllAsync(int? contractId = null, int? statusId = null);
-
         //retrieves service request list response DTOs
-        Task<IReadOnlyList<ServiceRequestListDto>> GetListAsync(int? contractId = null, int? statusId = null);
-
-        //retrieves a single service request by ID.
-        Task<ServiceRequest?> GetByIdAsync(int id);
-
-        //retrieves a service request with all associated details
-        Task<ServiceRequest?> GetDetailsAsync(int id);
+        Task<IReadOnlyList<ServiceRequestListDto>> GetServiceRequestsAsync(int? contractId = null, int? statusId = null);
 
         //retrieves a service request detail response DTO
-        Task<ServiceRequestDetailDto?> GetDetailDtoAsync(int id);
-
-        //retrieves all service requests associated with a contract
-        Task<List<ServiceRequest>> GetByContractIdAsync(int contractId);
-
-        //creates a new service request record
-        Task<ServiceRequest> CreateAsync(ServiceRequest serviceRequest);
+        Task<ServiceRequestDetailDto?> GetServiceRequestAsync(int id);
 
         //creates a new service request from a request DTO
-        Task<ServiceRequestDetailDto> CreateAsync(CreateServiceRequestDto dto);
-
-        //updates an existing service request record
-        Task UpdateAsync(ServiceRequest serviceRequest);
+        Task<ServiceRequestDetailDto> CreateServiceRequestAsync(CreateServiceRequestDto dto);
 
         //updates an existing service request from a request DTO
-        Task<ServiceRequestDetailDto> UpdateAsync(int id, UpdateServiceRequestDto dto);
-
-        //updates only the service request status
-        Task UpdateStatusAsync(int id, int statusId);
+        Task<ServiceRequestDetailDto> UpdateServiceRequestAsync(int id, UpdateServiceRequestDto dto);
 
         //updates only the service request status from a request DTO
-        Task<ServiceRequestDetailDto> UpdateStatusAsync(int id, UpdateServiceRequestStatusDto dto);
+        Task<ServiceRequestDetailDto> UpdateServiceRequestStatusAsync(int id, UpdateServiceRequestStatusDto dto);
 
         //removes a service request record from the database
-        Task DeleteAsync(int id);
+        Task DeleteServiceRequestAsync(int id);
     }
 
     //..............................................................................//
@@ -75,86 +54,93 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        //retrieves all service requests from the database
-        public async Task<List<ServiceRequest>> GetAllAsync(int? contractId = null, int? statusId = null)
-        {
-            return await _serviceRequestRepository.GetFilteredServiceRequestsAsync(contractId, statusId);
-        }
-
-        //..............................................................................//
-
         //retrieves service request list response DTOs
-        public async Task<IReadOnlyList<ServiceRequestListDto>> GetListAsync(int? contractId = null, int? statusId = null)
+        public async Task<IReadOnlyList<ServiceRequestListDto>> GetServiceRequestsAsync(int? contractId = null, int? statusId = null)
         {
-            var requests = await GetAllAsync(contractId, statusId);
+            var requests = await _serviceRequestRepository.GetFilteredServiceRequestsAsync(contractId, statusId);
             return requests.Select(request => request.ToListDto()).ToList();
         }
 
         //..............................................................................//
 
-        //retrieves a single service request by ID, returns null if invalid or not found
-        public async Task<ServiceRequest?> GetByIdAsync(int id)
-        {
-            if (id <= 0)
-                return null;
-
-            return await _serviceRequestRepository.GetByIdAsync(id);
-        }
-
-        //..............................................................................//
-
-        //retrieves a service request with all associated details
-        public async Task<ServiceRequest?> GetDetailsAsync(int id)
-        {
-            if (id <= 0)
-                return null;
-
-            return await _serviceRequestRepository.GetServiceRequestWithDetailsAsync(id);
-        }
-
-        //..............................................................................//
-
         //retrieves a service request detail response DTO
-        public async Task<ServiceRequestDetailDto?> GetDetailDtoAsync(int id)
+        public async Task<ServiceRequestDetailDto?> GetServiceRequestAsync(int id)
         {
-            var request = await GetDetailsAsync(id);
+            if (id <= 0)
+                return null;
+
+            var request = await _serviceRequestRepository.GetServiceRequestWithDetailsAsync(id);
             return request?.ToDetailDto();
         }
 
         //..............................................................................//
 
-        //retrieves all service requests associated with a contract
-        public async Task<List<ServiceRequest>> GetByContractIdAsync(int contractId)
+        //creates a new service request from a request DTO
+        public async Task<ServiceRequestDetailDto> CreateServiceRequestAsync(CreateServiceRequestDto dto)
         {
-            if (contractId <= 0)
-                return new List<ServiceRequest>();
+            var created = await CreateServiceRequestRecordAsync(dto.ToEntity(GetCurrentUserId()));
+            var detail = await _serviceRequestRepository.GetServiceRequestWithDetailsAsync(created.ServiceRequestId);
+            return (detail ?? created).ToDetailDto();
+        }
 
-            var contract = await _contractRepository.GetByIdAsync(contractId);
-            if (contract == null)
-                return new List<ServiceRequest>();
+        //..............................................................................//
 
-            return await _serviceRequestRepository.GetServiceRequestsByContractAsync(contractId);
+        //updates an existing service request from a request DTO
+        public async Task<ServiceRequestDetailDto> UpdateServiceRequestAsync(int id, UpdateServiceRequestDto dto)
+        {
+            if (id != dto.ServiceRequestId)
+                throw new ArgumentException("Service request ID does not match.");
+
+            var serviceRequest = await _serviceRequestRepository.GetByIdAsync(id);
+            if (serviceRequest == null)
+                throw new KeyNotFoundException($"Service request with ID {id} not found.");
+
+            dto.ApplyTo(serviceRequest);
+            await UpdateServiceRequestRecordAsync(serviceRequest);
+
+            var detail = await _serviceRequestRepository.GetServiceRequestWithDetailsAsync(id);
+            if (detail == null)
+                throw new KeyNotFoundException($"Service request with ID {id} not found.");
+
+            return detail.ToDetailDto();
+        }
+
+        //..............................................................................//
+
+        //updates only the service request status from a request DTO
+        public async Task<ServiceRequestDetailDto> UpdateServiceRequestStatusAsync(int id, UpdateServiceRequestStatusDto dto)
+        {
+            await UpdateServiceRequestStatusRecordAsync(id, dto.ServiceRequestStatusId);
+
+            var detail = await _serviceRequestRepository.GetServiceRequestWithDetailsAsync(id);
+            if (detail == null)
+                throw new KeyNotFoundException($"Service request with ID {id} not found.");
+
+            return detail.ToDetailDto();
+        }
+
+        //..............................................................................//
+
+        //removes a service request record from the database
+        public async Task DeleteServiceRequestAsync(int id)
+        {
+            if (id <= 0)
+                throw new ArgumentException("Invalid service request ID.", nameof(id));
+
+            var serviceRequest = await _serviceRequestRepository.GetByIdAsync(id);
+            if (serviceRequest == null)
+                throw new KeyNotFoundException($"Service request with ID {id} not found.");
+
+            _serviceRequestRepository.Delete(serviceRequest);
+            await _serviceRequestRepository.SaveChangesAsync();
         }
 
         //..............................................................................//
 
         //creates a new service request and ensures contract is active
-        public async Task<ServiceRequest> CreateAsync(ServiceRequest serviceRequest)
+        private async Task<ServiceRequest> CreateServiceRequestRecordAsync(ServiceRequest serviceRequest)
         {
-            if (serviceRequest == null)
-                throw new ArgumentNullException(nameof(serviceRequest));
-
-            if (serviceRequest.ContractId <= 0)
-                throw new ArgumentException("Valid contract ID is required.", nameof(serviceRequest.ContractId));
-
-            if (string.IsNullOrWhiteSpace(serviceRequest.Description))
-                throw new ArgumentException("Description is required.", nameof(serviceRequest.Description));
-
-            if (serviceRequest.AmountOriginal <= 0)
-                throw new ArgumentException("Original amount must be greater than zero.", nameof(serviceRequest.AmountOriginal));
-
-            if (string.IsNullOrWhiteSpace(serviceRequest.OriginalCurrencyCode))
-                throw new ArgumentException("Original currency code is required.", nameof(serviceRequest.OriginalCurrencyCode));
+            ValidateServiceRequest(serviceRequest);
 
             if (string.IsNullOrWhiteSpace(serviceRequest.RequestedByUserId))
                 throw new ArgumentException("Requested by user ID is required.", nameof(serviceRequest.RequestedByUserId));
@@ -163,38 +149,8 @@ namespace GLMS.Api.Services
             if (contract == null)
                 throw new KeyNotFoundException($"Contract with ID {serviceRequest.ContractId} not found.");
 
-            //business rule: check contract status before allowing service request creation
-            string statusName = contract.ContractStatus?.StatusName?.Trim() ?? string.Empty;
-
-            if (string.Equals(statusName, ContractStatusConstants.OnHoldName, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException($"Cannot create a service request for a contract that is on hold.");
-
-            if (string.Equals(statusName, ContractStatusConstants.ExpiredName, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException($"Cannot create a service request for an expired contract.");
-
-            if (!string.Equals(statusName, ContractStatusConstants.ActiveName, StringComparison.OrdinalIgnoreCase))
-            {
-                var displayStatus = string.IsNullOrWhiteSpace(statusName) ? "Unknown" : statusName;
-                throw new InvalidOperationException($"Service requests can only be created for active contracts. This contract status is: {displayStatus}");
-            }
-
-            var currencyCode = serviceRequest.OriginalCurrencyCode.Trim().ToUpperInvariant();
-
-            try
-            {
-                var rate = await _currencyExchangeService.GetRateToZarAsync(currencyCode);
-                serviceRequest.OriginalCurrencyCode = currencyCode;
-                serviceRequest.ExchangeRateToZAR = rate;
-                serviceRequest.AmountZAR = decimal.Round(serviceRequest.AmountOriginal * rate, 2, MidpointRounding.AwayFromZero);
-            }
-            catch (ArgumentException ex)
-            {
-                throw new InvalidOperationException(ex.Message);
-            }
-            catch (Exception ex) when (ex is InvalidOperationException || ex is HttpRequestException || ex is TaskCanceledException)
-            {
-                throw new InvalidOperationException($"Unable to convert {currencyCode} to ZAR right now. Please try again.", ex);
-            }
+            EnsureContractCanReceiveServiceRequests(contract);
+            await ApplyCurrencyConversionAsync(serviceRequest);
 
             serviceRequest.RequestedAt = DateTime.UtcNow;
             serviceRequest.UpdatedAt = DateTime.UtcNow;
@@ -207,52 +163,15 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        //creates a new service request from a request DTO
-        public async Task<ServiceRequestDetailDto> CreateAsync(CreateServiceRequestDto dto)
-        {
-            var created = await CreateAsync(dto.ToEntity(GetCurrentUserId()));
-            var detail = await GetDetailsAsync(created.ServiceRequestId);
-            return (detail ?? created).ToDetailDto();
-        }
-
-        //..............................................................................//
-
         //updates an existing service request
-        public async Task UpdateAsync(ServiceRequest serviceRequest)
+        private async Task UpdateServiceRequestRecordAsync(ServiceRequest serviceRequest)
         {
-            if (serviceRequest == null)
-                throw new ArgumentNullException(nameof(serviceRequest));
+            ValidateServiceRequest(serviceRequest);
 
             if (serviceRequest.ServiceRequestId <= 0)
                 throw new ArgumentException("Invalid service request ID.", nameof(serviceRequest.ServiceRequestId));
 
-            var existing = await _serviceRequestRepository.GetByIdAsync(serviceRequest.ServiceRequestId);
-            if (existing == null)
-                throw new KeyNotFoundException($"Service request with ID {serviceRequest.ServiceRequestId} not found.");
-
-            if (serviceRequest.AmountOriginal <= 0)
-                throw new ArgumentException("Original amount must be greater than zero.", nameof(serviceRequest.AmountOriginal));
-
-            if (string.IsNullOrWhiteSpace(serviceRequest.OriginalCurrencyCode))
-                throw new ArgumentException("Original currency code is required.", nameof(serviceRequest.OriginalCurrencyCode));
-
-            var currencyCode = serviceRequest.OriginalCurrencyCode.Trim().ToUpperInvariant();
-
-            try
-            {
-                var rate = await _currencyExchangeService.GetRateToZarAsync(currencyCode);
-                serviceRequest.OriginalCurrencyCode = currencyCode;
-                serviceRequest.ExchangeRateToZAR = rate;
-                serviceRequest.AmountZAR = decimal.Round(serviceRequest.AmountOriginal * rate, 2, MidpointRounding.AwayFromZero);
-            }
-            catch (ArgumentException ex)
-            {
-                throw new InvalidOperationException(ex.Message);
-            }
-            catch (Exception ex) when (ex is InvalidOperationException || ex is HttpRequestException || ex is TaskCanceledException)
-            {
-                throw new InvalidOperationException($"Unable to convert {currencyCode} to ZAR right now. Please try again.", ex);
-            }
+            await ApplyCurrencyConversionAsync(serviceRequest);
 
             serviceRequest.UpdatedAt = DateTime.UtcNow;
 
@@ -262,30 +181,8 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        //updates an existing service request from a request DTO
-        public async Task<ServiceRequestDetailDto> UpdateAsync(int id, UpdateServiceRequestDto dto)
-        {
-            if (id != dto.ServiceRequestId)
-                throw new ArgumentException("Service request ID does not match.");
-
-            var serviceRequest = await GetByIdAsync(id);
-            if (serviceRequest == null)
-                throw new KeyNotFoundException($"Service request with ID {id} not found.");
-
-            dto.ApplyTo(serviceRequest);
-            await UpdateAsync(serviceRequest);
-
-            var detail = await GetDetailsAsync(id);
-            if (detail == null)
-                throw new KeyNotFoundException($"Service request with ID {id} not found.");
-
-            return detail.ToDetailDto();
-        }
-
-        //..............................................................................//
-
         //updates only the service request status
-        public async Task UpdateStatusAsync(int id, int statusId)
+        private async Task UpdateServiceRequestStatusRecordAsync(int id, int statusId)
         {
             if (id <= 0)
                 throw new ArgumentException("Invalid service request ID.", nameof(id));
@@ -306,32 +203,67 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        //updates only the service request status from a request DTO
-        public async Task<ServiceRequestDetailDto> UpdateStatusAsync(int id, UpdateServiceRequestStatusDto dto)
+        //checks the required service request fields
+        private static void ValidateServiceRequest(ServiceRequest serviceRequest)
         {
-            await UpdateStatusAsync(id, dto.ServiceRequestStatusId);
+            if (serviceRequest == null)
+                throw new ArgumentNullException(nameof(serviceRequest));
 
-            var detail = await GetDetailsAsync(id);
-            if (detail == null)
-                throw new KeyNotFoundException($"Service request with ID {id} not found.");
+            if (serviceRequest.ContractId <= 0)
+                throw new ArgumentException("Valid contract ID is required.", nameof(serviceRequest.ContractId));
 
-            return detail.ToDetailDto();
+            if (string.IsNullOrWhiteSpace(serviceRequest.Description))
+                throw new ArgumentException("Description is required.", nameof(serviceRequest.Description));
+
+            if (serviceRequest.AmountOriginal <= 0)
+                throw new ArgumentException("Original amount must be greater than zero.", nameof(serviceRequest.AmountOriginal));
+
+            if (string.IsNullOrWhiteSpace(serviceRequest.OriginalCurrencyCode))
+                throw new ArgumentException("Original currency code is required.", nameof(serviceRequest.OriginalCurrencyCode));
         }
 
         //..............................................................................//
-        
-        //removes a service request record from the database
-        public async Task DeleteAsync(int id)
+
+        //business rule: check contract status before allowing service request creation
+        private static void EnsureContractCanReceiveServiceRequests(Contract contract)
         {
-            if (id <= 0)
-                throw new ArgumentException("Invalid service request ID.", nameof(id));
+            string statusName = contract.ContractStatus?.StatusName?.Trim() ?? string.Empty;
 
-            var serviceRequest = await _serviceRequestRepository.GetByIdAsync(id);
-            if (serviceRequest == null)
-                throw new KeyNotFoundException($"Service request with ID {id} not found.");
+            if (string.Equals(statusName, ContractStatusConstants.OnHoldName, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Cannot create a service request for a contract that is on hold.");
 
-            _serviceRequestRepository.Delete(serviceRequest);
-            await _serviceRequestRepository.SaveChangesAsync();
+            if (string.Equals(statusName, ContractStatusConstants.ExpiredName, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Cannot create a service request for an expired contract.");
+
+            if (!string.Equals(statusName, ContractStatusConstants.ActiveName, StringComparison.OrdinalIgnoreCase))
+            {
+                var displayStatus = string.IsNullOrWhiteSpace(statusName) ? "Unknown" : statusName;
+                throw new InvalidOperationException($"Service requests can only be created for active contracts. This contract status is: {displayStatus}");
+            }
+        }
+
+        //..............................................................................//
+
+        //converts the original amount to ZAR using the exchange service
+        private async Task ApplyCurrencyConversionAsync(ServiceRequest serviceRequest)
+        {
+            var currencyCode = serviceRequest.OriginalCurrencyCode.Trim().ToUpperInvariant();
+
+            try
+            {
+                var rate = await _currencyExchangeService.GetRateToZarAsync(currencyCode);
+                serviceRequest.OriginalCurrencyCode = currencyCode;
+                serviceRequest.ExchangeRateToZAR = rate;
+                serviceRequest.AmountZAR = decimal.Round(serviceRequest.AmountOriginal * rate, 2, MidpointRounding.AwayFromZero);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new InvalidOperationException(ex.Message);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is HttpRequestException || ex is TaskCanceledException)
+            {
+                throw new InvalidOperationException($"Unable to convert {currencyCode} to ZAR right now. Please try again.", ex);
+            }
         }
 
         //..............................................................................//
@@ -345,5 +277,3 @@ namespace GLMS.Api.Services
         //..............................................................................//
     }
 }
-
-
