@@ -31,6 +31,9 @@ namespace GLMS.Api.Services
         //updates an existing contract record
         Task UpdateAsync(Contract contract);
 
+        //updates only the contract status
+        Task UpdateStatusAsync(int id, int statusId);
+
         //removes a contract record from the database
         Task DeleteAsync(int id);
     }
@@ -43,13 +46,16 @@ namespace GLMS.Api.Services
     {
         private readonly IContractRepository _contractRepository;
         private readonly IClientRepository _clientRepository;
+        private readonly IRepository<ContractStatus> _contractStatusRepository;
 
         public ContractService(
             IContractRepository contractRepository,
-            IClientRepository clientRepository)
+            IClientRepository clientRepository,
+            IRepository<ContractStatus> contractStatusRepository)
         {
             _contractRepository = contractRepository;
             _clientRepository = clientRepository;
+            _contractStatusRepository = contractStatusRepository;
         }
 
         //..............................................................................//
@@ -150,6 +156,33 @@ namespace GLMS.Api.Services
             if (client == null)
                 throw new KeyNotFoundException($"Client with ID {contract.ClientId} not found.");
 
+            contract.UpdatedAt = DateTime.UtcNow;
+
+            _contractRepository.Update(contract);
+            await _contractRepository.SaveChangesAsync();
+        }
+
+        //..............................................................................//
+
+        //updates only the contract status
+        public async Task UpdateStatusAsync(int id, int statusId)
+        {
+            if (id <= 0)
+                throw new ArgumentException("Invalid contract ID.", nameof(id));
+
+            if (statusId <= 0)
+                throw new ArgumentException("Valid contract status ID is required.", nameof(statusId));
+
+            var contract = await _contractRepository.GetByIdAsync(id);
+            if (contract == null)
+                throw new KeyNotFoundException($"Contract with ID {id} not found.");
+
+            var status = await _contractStatusRepository.GetByIdAsync(statusId);
+            if (status == null)
+                throw new ArgumentException($"Contract status with ID {statusId} was not found.", nameof(statusId));
+
+            contract.ContractStatusId = status.ContractStatusId;
+            contract.ContractStatus = status;
             contract.UpdatedAt = DateTime.UtcNow;
 
             _contractRepository.Update(contract);

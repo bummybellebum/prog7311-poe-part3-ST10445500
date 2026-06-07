@@ -84,10 +84,10 @@ namespace GLMS.Api.Data
 
 			//add the default contract statuses to the database
 			builder.Entity<ContractStatus>().HasData(
-				new ContractStatus { ContractStatusId = 1, StatusName = "Draft" },
-				new ContractStatus { ContractStatusId = 2, StatusName = "Active" },
-				new ContractStatus { ContractStatusId = 3, StatusName = "On Hold" },
-				new ContractStatus { ContractStatusId = 4, StatusName = "Expired" }
+				new ContractStatus { ContractStatusId = ContractStatusConstants.DraftId, StatusName = ContractStatusConstants.DraftName },
+				new ContractStatus { ContractStatusId = ContractStatusConstants.ActiveId, StatusName = ContractStatusConstants.ActiveName },
+				new ContractStatus { ContractStatusId = ContractStatusConstants.OnHoldId, StatusName = ContractStatusConstants.OnHoldName },
+				new ContractStatus { ContractStatusId = ContractStatusConstants.ExpiredId, StatusName = ContractStatusConstants.ExpiredName }
 			);
 
 			//..............................................................................//

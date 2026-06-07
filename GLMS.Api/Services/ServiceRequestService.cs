@@ -129,16 +129,19 @@ namespace GLMS.Api.Services
                 throw new KeyNotFoundException($"Contract with ID {serviceRequest.ContractId} not found.");
 
             //business rule: check contract status before allowing service request creation
-            string statusName = contract.ContractStatus?.StatusName ?? "";
+            string statusName = contract.ContractStatus?.StatusName?.Trim() ?? string.Empty;
 
-            if (statusName == "On Hold")
+            if (string.Equals(statusName, ContractStatusConstants.OnHoldName, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException($"Cannot create a service request for a contract that is on hold.");
 
-            if (statusName == "Expired")
+            if (string.Equals(statusName, ContractStatusConstants.ExpiredName, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException($"Cannot create a service request for an expired contract.");
 
-            if (statusName != "Active")
-                throw new InvalidOperationException($"Service requests can only be created for active contracts. This contract status is: {statusName}");
+            if (!string.Equals(statusName, ContractStatusConstants.ActiveName, StringComparison.OrdinalIgnoreCase))
+            {
+                var displayStatus = string.IsNullOrWhiteSpace(statusName) ? "Unknown" : statusName;
+                throw new InvalidOperationException($"Service requests can only be created for active contracts. This contract status is: {displayStatus}");
+            }
 
             var currencyCode = serviceRequest.OriginalCurrencyCode.Trim().ToUpperInvariant();
 

@@ -108,15 +108,19 @@ namespace GLMS.Api.Controllers
         [HttpPatch("{id:int}/status")]
         public async Task<IActionResult> UpdateStatus(int id, UpdateContractStatusDto dto)
         {
-            var contract = await _contractService.GetByIdAsync(id);
-            if (contract == null)
+            try
+            {
+                await _contractService.UpdateStatusAsync(id, dto.ContractStatusId);
+                return Ok();
+            }
+            catch (KeyNotFoundException)
             {
                 return NotFound();
             }
-
-            contract.ContractStatusId = dto.ContractStatusId;
-            await _contractService.UpdateAsync(contract);
-            return Ok();
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+            {
+                return BadRequest(new { errors = new[] { ex.Message } });
+            }
         }
 
         //..............................................................................//

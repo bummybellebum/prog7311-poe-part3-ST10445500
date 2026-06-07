@@ -20,7 +20,7 @@ namespace GLMS.Tests.Unit.Services
 
             contractRepository
                 .Setup(r => r.GetContractWithDetailsAsync(request.ContractId))
-                .ReturnsAsync(CreateContractWithStatus("On Hold"));
+                .ReturnsAsync(CreateContractWithStatus(ContractStatusConstants.OnHoldName));
 
             // Act
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(request));
@@ -43,7 +43,7 @@ namespace GLMS.Tests.Unit.Services
 
             contractRepository
                 .Setup(r => r.GetContractWithDetailsAsync(request.ContractId))
-                .ReturnsAsync(CreateContractWithStatus("Expired"));
+                .ReturnsAsync(CreateContractWithStatus(ContractStatusConstants.ExpiredName));
 
             // Act
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(request));
@@ -66,7 +66,7 @@ namespace GLMS.Tests.Unit.Services
 
             contractRepository
                 .Setup(r => r.GetContractWithDetailsAsync(request.ContractId))
-                .ReturnsAsync(CreateContractWithStatus("Active"));
+                .ReturnsAsync(CreateContractWithStatus(ContractStatusConstants.ActiveName));
 
             currencyExchangeService
                 .Setup(s => s.GetRateToZarAsync("USD", It.IsAny<CancellationToken>()))
@@ -98,7 +98,7 @@ namespace GLMS.Tests.Unit.Services
 
             contractRepository
                 .Setup(r => r.GetContractWithDetailsAsync(request.ContractId))
-                .ReturnsAsync(CreateContractWithStatus("Active"));
+                .ReturnsAsync(CreateContractWithStatus(ContractStatusConstants.ActiveName));
 
             currencyExchangeService
                 .Setup(s => s.GetRateToZarAsync("EUR", It.IsAny<CancellationToken>()))
@@ -110,6 +110,52 @@ namespace GLMS.Tests.Unit.Services
             // Assert
             Assert.Equal("EUR", result.OriginalCurrencyCode);
             Assert.Equal(2484.24m, result.AmountZAR);
+        }
+
+        [Fact]
+        public async Task CreateAsync_ThrowsInvalidOperationException_WhenContractIsDraft()
+        {
+            // Arrange
+            var serviceRequestRepository = new Mock<IServiceRequestRepository>();
+            var contractRepository = new Mock<IContractRepository>();
+            var currencyExchangeService = new Mock<ICurrencyExchangeService>();
+
+            var service = new ServiceRequestService(serviceRequestRepository.Object, contractRepository.Object, currencyExchangeService.Object);
+            var request = CreateValidRequest();
+
+            contractRepository
+                .Setup(r => r.GetContractWithDetailsAsync(request.ContractId))
+                .ReturnsAsync(CreateContractWithStatus(ContractStatusConstants.DraftName));
+
+            // Act
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(request));
+
+            // Assert
+            Assert.Equal("Service requests can only be created for active contracts. This contract status is: Draft", exception.Message);
+            serviceRequestRepository.Verify(r => r.AddAsync(It.IsAny<ServiceRequest>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task CreateAsync_ThrowsInvalidOperationException_WhenContractStatusIsMissing()
+        {
+            // Arrange
+            var serviceRequestRepository = new Mock<IServiceRequestRepository>();
+            var contractRepository = new Mock<IContractRepository>();
+            var currencyExchangeService = new Mock<ICurrencyExchangeService>();
+
+            var service = new ServiceRequestService(serviceRequestRepository.Object, contractRepository.Object, currencyExchangeService.Object);
+            var request = CreateValidRequest();
+
+            contractRepository
+                .Setup(r => r.GetContractWithDetailsAsync(request.ContractId))
+                .ReturnsAsync(CreateContractWithoutStatus());
+
+            // Act
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(request));
+
+            // Assert
+            Assert.Equal("Service requests can only be created for active contracts. This contract status is: Unknown", exception.Message);
+            serviceRequestRepository.Verify(r => r.AddAsync(It.IsAny<ServiceRequest>()), Times.Never);
         }
 
         private static ServiceRequest CreateValidRequest()
@@ -134,13 +180,27 @@ namespace GLMS.Tests.Unit.Services
                 Title = "Contract A",
                 StartDate = DateTime.UtcNow.Date,
                 EndDate = DateTime.UtcNow.Date.AddMonths(6),
-                ContractStatusId = 2,
+                ContractStatusId = ContractStatusConstants.ActiveId,
                 CreatedByUserId = "creator-1",
                 ContractStatus = new ContractStatus
                 {
-                    ContractStatusId = 2,
+                    ContractStatusId = ContractStatusConstants.ActiveId,
                     StatusName = statusName
                 }
+            };
+        }
+
+        private static Contract CreateContractWithoutStatus()
+        {
+            return new Contract
+            {
+                ContractId = 1,
+                ClientId = 1,
+                Title = "Contract A",
+                StartDate = DateTime.UtcNow.Date,
+                EndDate = DateTime.UtcNow.Date.AddMonths(6),
+                ContractStatusId = ContractStatusConstants.DraftId,
+                CreatedByUserId = "creator-1"
             };
         }
     }
