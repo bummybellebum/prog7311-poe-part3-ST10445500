@@ -35,21 +35,16 @@ services:
       Jwt__Key: "${Jwt__Key}"
       Jwt__Issuer: "${Jwt__Issuer}"
       Jwt__Audience: "${Jwt__Audience}"
-      Jwt__ExpiryMinutes: "${Jwt__ExpiryMinutes}"
+      Jwt__ExpiresMinutes: "${Jwt__ExpiresMinutes}"
 
-      FileStorage__ContractsPath: "${FileStorage__ContractsPath}"
-
-      SeedData__Enabled: "${SeedData__Enabled}"
-      Admin__Email: "${Admin__Email}"
-      Admin__Password: "${Admin__Password}"
+      Uploads__SignedAgreementFolder: "uploads/signed-agreements"
 
       CurrencyApi__BaseUrl: "${CurrencyApi__BaseUrl}"
-      CurrencyApi__DefaultFromCurrency: "${CurrencyApi__DefaultFromCurrency}"
-      CurrencyApi__DefaultToCurrency: "${CurrencyApi__DefaultToCurrency}"
+      CurrencyApi__TargetCurrency: "${CurrencyApi__TargetCurrency}"
     ports:
-      - "8080:8080"
+      - "5053:8080"
     volumes:
-      - glms-contract-uploads:/app/uploads/contracts
+      - glms-contract-uploads:/app/uploads/signed-agreements
     networks:
       - glms-network
     depends_on:
@@ -65,9 +60,9 @@ services:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_HTTP_PORTS: "8080"
 
-      ApiSettings__BaseUrl: "${ApiSettings__BaseUrl}"
+      ApiSettings__BaseUrl: "http://glms-backend-api:8080/"
     ports:
-      - "8082:8080"
+      - "5004:8080"
     networks:
       - glms-network
     depends_on:
