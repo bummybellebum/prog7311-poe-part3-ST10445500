@@ -1,4 +1,3 @@
-
 using GLMS.Api.Data;
 using GLMS.Api.Data.Repositories;
 using GLMS.Api.Models;
@@ -8,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -94,22 +94,51 @@ namespace GLMS.Api
 				{
 					options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
 				});
-			// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-			builder.Services.AddOpenApi();
+
+			builder.Services.AddEndpointsApiExplorer();
+
+			builder.Services.AddSwaggerGen(options =>
+			{
+				options.SwaggerDoc("v1", new OpenApiInfo
+				{
+					Title = "GLMS API",
+					Version = "v1",
+					Description = "Global Logistics Management System API"
+				});
+
+				options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+				{
+					Name = "Authorization",
+					In = ParameterLocation.Header,
+					Type = SecuritySchemeType.Http,
+					Scheme = "bearer",
+					BearerFormat = "JWT",
+					Description = "Enter your JWT token only. Do not type 'Bearer' before it."
+				});
+
+				options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+				{
+					[new OpenApiSecuritySchemeReference("Bearer", document)] = []
+				});
+			});
 
 			var app = builder.Build();
 
 			// Configure the HTTP request pipeline.
 			if (app.Environment.IsDevelopment())
 			{
-				app.MapOpenApi();
+				app.UseSwagger();
+				app.UseSwaggerUI(options =>
+				{
+					options.SwaggerEndpoint("/swagger/v1/swagger.json", "GLMS API v1");
+					options.RoutePrefix = "swagger";
+				});
 			}
 
 			app.UseHttpsRedirection();
 
 			app.UseAuthentication();
 			app.UseAuthorization();
-
 
 			app.MapControllers();
 
@@ -179,4 +208,3 @@ namespace GLMS.Api
 		}
 	}
 }
-
