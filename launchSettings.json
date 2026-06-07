@@ -3,10 +3,13 @@
     "Docker Compose": {
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
+      "composeLaunchAction": "LaunchBrowser",
+      "composeLaunchServiceName": "glms-web",
+      "composeLaunchUrl": "{Scheme}://localhost:{ServicePort}",
       "serviceActions": {
-        "backend-api": "StartDebugging",
-        "frontend-web": "StartDebugging",
-        "sql-server-db": "StartWithoutDebugging"
+        "glms-api": "StartDebugging",
+        "glms-db": "StartWithoutDebugging",
+        "glms-web": "StartDebugging"
       }
     }
   }

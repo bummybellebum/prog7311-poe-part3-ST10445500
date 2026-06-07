@@ -1,75 +1,69 @@
 name: st10445500-glms-stack
 
 services:
-  sql-server-db:
+  glms-db:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    env_file:
-      - .env
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
       MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}"
     ports:
-      - "14333:1433"
+      - "14333:1433" # Host SQL access: localhost,14333
     volumes:
       - sql-server-data:/var/opt/mssql
     networks:
       - glms-network
     healthcheck:
-      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" -b -o /dev/null
+      test: ["CMD-SHELL", '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" -b -o /dev/null']
       interval: 10s
       timeout: 5s
       retries: 12
       start_period: 30s
 
-  backend-api:
+  glms-api:
     build:
       context: .
       dockerfile: GLMS.Api/Dockerfile
-    env_file:
-      - .env
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_HTTP_PORTS: "8080"
 
-      ConnectionStrings__DefaultConnection: "Server=sql-server-db,1433;Database=${MSSQL_DB};User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=True"
+      ConnectionStrings__DefaultConnection: "Server=glms-db,1433;Database=${MSSQL_DB};User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=True"
 
       Jwt__Key: "${Jwt__Key}"
       Jwt__Issuer: "${Jwt__Issuer}"
       Jwt__Audience: "${Jwt__Audience}"
       Jwt__ExpiresMinutes: "${Jwt__ExpiresMinutes}"
 
-      Uploads__SignedAgreementFolder: "uploads/signed-agreements"
+      Uploads__SignedAgreementFolder: "/app/uploads/signed-agreements"
 
       CurrencyApi__BaseUrl: "${CurrencyApi__BaseUrl}"
       CurrencyApi__TargetCurrency: "${CurrencyApi__TargetCurrency}"
     ports:
-      - "5053:8080"
+      - "5053:8080" # Host API access: http://localhost:5053
     volumes:
       - contract-uploads:/app/uploads/signed-agreements
     networks:
       - glms-network
     depends_on:
-      sql-server-db:
+      glms-db:
         condition: service_healthy
 
-  frontend-web:
+  glms-web:
     build:
       context: .
       dockerfile: GLMS.Web/Dockerfile
-    env_file:
-      - .env
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_HTTP_PORTS: "8080"
 
-      ApiSettings__BaseUrl: "http://backend-api:8080/"
+      ApiSettings__BaseUrl: "http://glms-api:8080/"
     ports:
-      - "5004:8080"
+      - "5004:8080" # Host web access: http://localhost:5004
     networks:
       - glms-network
     depends_on:
-      backend-api:
+      glms-api:
         condition: service_started
 
 volumes:
