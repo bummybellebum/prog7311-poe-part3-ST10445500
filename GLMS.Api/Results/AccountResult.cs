@@ -1,9 +1,4 @@
-//ST10445500 - PROG7311 - GLMS POE
-//AccountResult
-
-//.....................................o0oSTART OF FILEo0o........................................//
-
-namespace GLMS.Api.Services
+namespace GLMS.Api.Results
 {
     public class AccountResult
     {
@@ -46,6 +41,3 @@ namespace GLMS.Api.Services
         public static new AccountResult<T> NotFound(params string[] errors) => new(false, true, default, errors);
     }
 }
-
-//.....................................o0oEND OF FILEo0o........................................//
-

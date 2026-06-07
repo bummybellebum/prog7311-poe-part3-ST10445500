@@ -1,6 +1,6 @@
 using GLMS.Api.Data.Repositories;
-using GLMS.Api.DTOs;
 using GLMS.Api.DTOs.Lookups;
+using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
 
 namespace GLMS.Api.Services
@@ -94,11 +94,7 @@ namespace GLMS.Api.Services
 
             var clients = await _clientRepository.GetClientsAsync();
             return clients
-                .Select(client => new LookupDto
-                {
-                    Id = client.ClientId,
-                    Name = client.CompanyName
-                })
+                .Select(client => client.ToLookupDto())
                 .ToList();
         }
 
@@ -112,11 +108,7 @@ namespace GLMS.Api.Services
 
             var contracts = await _contractRepository.GetAllAsync();
             return contracts
-                .Select(contract => new LookupDto
-                {
-                    Id = contract.ContractId,
-                    Name = contract.Title
-                })
+                .Select(contract => contract.ToLookupDto())
                 .ToList();
         }
 
@@ -124,5 +116,4 @@ namespace GLMS.Api.Services
     }
 }
 
-//.....................................o0oEND OF FILEo0o........................................//
 

@@ -1,13 +1,11 @@
 using GLMS.Api.DTOs.Auth;
 using GLMS.Api.Responses;
+using GLMS.Api.Results;
 using GLMS.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-//ST10445500 - PROG7311 - GLMS POE
-//AuthController
 
-//.....................................o0oSTART OF FILEo0o........................................//
 
 namespace GLMS.Api.Controllers
 {
@@ -89,4 +87,3 @@ namespace GLMS.Api.Controllers
     }
 }
 
-//.....................................o0oEND OF FILEo0o..........................................//

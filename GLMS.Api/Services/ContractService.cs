@@ -1,12 +1,9 @@
 using GLMS.Api.Data.Repositories;
-using GLMS.Api.DTOs;
 using GLMS.Api.DTOs.Contracts;
+using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
 
-//ST10445500 - PROG7311 - GLMS POE
-//ContractService
 
-//.....................................o0oSTART OF FILEo0o........................................//
 
 namespace GLMS.Api.Services
 {
@@ -305,5 +302,4 @@ namespace GLMS.Api.Services
     }
 }
 
-//.....................................o0oEND OF FILEo0o..........................................//
 

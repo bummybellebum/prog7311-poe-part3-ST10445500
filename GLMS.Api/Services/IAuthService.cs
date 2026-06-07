@@ -1,10 +1,8 @@
 using System.Security.Claims;
 using GLMS.Api.DTOs.Auth;
+using GLMS.Api.Results;
 
-//ST10445500 - PROG7311 - GLMS POE
-//IAuthService
 
-//.....................................o0oSTART OF FILEo0o........................................//
 
 namespace GLMS.Api.Services
 {
@@ -18,4 +16,3 @@ namespace GLMS.Api.Services
     }
 }
 
-//.....................................o0oEND OF FILEo0o........................................//

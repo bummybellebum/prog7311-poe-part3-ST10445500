@@ -2,11 +2,6 @@ using GLMS.Api.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-//ST10445500 - PROG7311 - GLMS POE
-//ApplicationDbContext
-
-//.....................................o0oSTART OF FILEo0o........................................//
-
 namespace GLMS.Api.Data
 {
 	public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
@@ -18,12 +13,12 @@ namespace GLMS.Api.Data
 
 		//..............................................................................//
 
-		public DbSet<Client> Clients { get; set; }
-		public DbSet<ContractStatus> ContractStatuses { get; set; }
-		public DbSet<Contract> Contracts { get; set; }
-		public DbSet<ContractDocument> ContractDocuments { get; set; }
-		public DbSet<ServiceRequestStatus> ServiceRequestStatuses { get; set; }
-		public DbSet<ServiceRequest> ServiceRequests { get; set; }
+		public DbSet<Client> Clients { get; set; } = null!;
+		public DbSet<ContractStatus> ContractStatuses { get; set; } = null!;
+		public DbSet<Contract> Contracts { get; set; } = null!;
+		public DbSet<ContractDocument> ContractDocuments { get; set; } = null!;
+		public DbSet<ServiceRequestStatus> ServiceRequestStatuses { get; set; } = null!;
+		public DbSet<ServiceRequest> ServiceRequests { get; set; } = null!;
 
 		//..............................................................................//
 
@@ -105,6 +100,3 @@ namespace GLMS.Api.Data
 		}
 	}
 }
-
-//.....................................o0oEND OF FILEo0o........................................//
-

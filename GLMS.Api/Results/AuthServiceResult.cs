@@ -1,9 +1,4 @@
-//ST10445500 - PROG7311 - GLMS POE
-//AuthServiceResult
-
-//.....................................o0oSTART OF FILEo0o........................................//
-
-namespace GLMS.Api.Services
+namespace GLMS.Api.Results
 {
     public class AuthServiceResult<T>
     {
@@ -29,5 +24,3 @@ namespace GLMS.Api.Services
         public static AuthServiceResult<T> Unauthorized(params string[] errors) => new(false, true, default, errors);
     }
 }
-
-//.....................................o0oEND OF FILEo0o........................................//

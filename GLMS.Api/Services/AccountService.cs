@@ -1,12 +1,11 @@
 using GLMS.Api.DTOs.Auth;
+using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
+using GLMS.Api.Results;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-//ST10445500 - PROG7311 - GLMS POE
-//AccountService
 
-//.....................................o0oSTART OF FILEo0o........................................//
 
 namespace GLMS.Api.Services
 {
@@ -31,16 +30,7 @@ namespace GLMS.Api.Services
             foreach (var user in users)
             {
                 var roles = await _userManager.GetRolesAsync(user);
-                result.Add(new AdminUserListDto
-                {
-                    UserId = user.Id,
-                    Email = user.Email ?? string.Empty,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    Role = roles.FirstOrDefault() ?? string.Empty,
-                    IsActive = user.IsActive,
-                    CreatedAt = user.CreatedAt
-                });
+                result.Add(user.ToAdminUserListDto(roles.FirstOrDefault() ?? string.Empty));
             }
 
             return result;
@@ -57,15 +47,7 @@ namespace GLMS.Api.Services
             }
 
             var roles = await _userManager.GetRolesAsync(user);
-            return new AdminUserDetailDto
-            {
-                UserId = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email ?? string.Empty,
-                Role = roles.FirstOrDefault() ?? ApplicationRoles.LogisticsManager,
-                IsActive = user.IsActive
-            };
+            return user.ToAdminUserDetailDto(roles.FirstOrDefault() ?? ApplicationRoles.LogisticsManager);
         }
 
         //..............................................................................//
@@ -101,15 +83,7 @@ namespace GLMS.Api.Services
                 return ToAccountResult<AdminUserDetailDto>(roleResult);
             }
 
-            return AccountResult<AdminUserDetailDto>.Success(new AdminUserDetailDto
-            {
-                UserId = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email ?? string.Empty,
-                Role = dto.Role,
-                IsActive = user.IsActive
-            });
+            return AccountResult<AdminUserDetailDto>.Success(user.ToAdminUserDetailDto(dto.Role));
         }
 
         //..............................................................................//
@@ -233,5 +207,4 @@ namespace GLMS.Api.Services
     }
 }
 
-//.....................................o0oEND OF FILEo0o........................................//
 

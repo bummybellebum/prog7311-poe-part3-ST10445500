@@ -1,15 +1,13 @@
 using GLMS.Api.Data.Repositories;
-using GLMS.Api.DTOs;
 using GLMS.Api.DTOs.Documents;
+using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
+using GLMS.Api.Results;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 
-//ST10445500 - PROG7311 - GLMS POE
-//ContractDocumentService
 
-//.....................................o0oSTART OF FILEo0o........................................//
 
 namespace GLMS.Api.Services
 {
@@ -58,10 +56,6 @@ namespace GLMS.Api.Services
         //gets the physical file info needed to download a signed agreement.
         Task<SignedAgreementDownloadResult?> GetSignedAgreementDownloadAsync(int documentId);
     }
-
-    public record SignedAgreementDownloadResult(string PhysicalPath, string ContentType, string FileName);
-
-    //..............................................................................//
 
     //implements business logic for managing Contract Documents
     //validates data and coordinates with the repository layer
@@ -522,4 +516,3 @@ namespace GLMS.Api.Services
     }
 }
 
-//......................................o0oEND OF FILEo0o.........................................//

@@ -1,11 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-//ST10445500 - PROG7311 - GLMS POE
-//ServiceRequest
-
-//.....................................o0oSTART OF FILEo0o........................................//
-
 namespace GLMS.Api.Models
 {
     public class ServiceRequest
@@ -17,17 +12,17 @@ namespace GLMS.Api.Models
         public int ContractId { get; set; }
 
         [Required]
-        public string RequestedByUserId { get; set; }
+        public string RequestedByUserId { get; set; } = string.Empty;
 
         [Required]
         [StringLength(1000)]
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         [Column(TypeName = "decimal(18, 2)")]
         public decimal AmountOriginal { get; set; }
 
         [StringLength(3)]
-        public string OriginalCurrencyCode { get; set; }
+        public string OriginalCurrencyCode { get; set; } = string.Empty;
 
         [Column(TypeName = "decimal(18, 6)")]
         public decimal ExchangeRateToZAR { get; set; }
@@ -43,15 +38,12 @@ namespace GLMS.Api.Models
 
         //foreign key relationships
         [ForeignKey("ContractId")]
-        public Contract Contract { get; set; }
+        public Contract Contract { get; set; } = null!;
 
         [ForeignKey("RequestedByUserId")]
-        public ApplicationUser RequestedByUser { get; set; }
+        public ApplicationUser RequestedByUser { get; set; } = null!;
 
         [ForeignKey("ServiceRequestStatusId")]
-        public ServiceRequestStatus ServiceRequestStatus { get; set; }
+        public ServiceRequestStatus ServiceRequestStatus { get; set; } = null!;
     }
 }
-
-//.....................................o0oEND OF FILEo0o..........................................//
-

@@ -1,11 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-//ST10445500 - PROG7311 - GLMS POE
-//Contract
-
-//.....................................o0oSTART OF FILEo0o........................................//
-
 namespace GLMS.Api.Models
 {
     public class Contract
@@ -18,7 +13,7 @@ namespace GLMS.Api.Models
 
         [Required]
         [StringLength(255)]
-        public string Title { get; set; }
+        public string Title { get; set; } = string.Empty;
 
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
@@ -27,32 +22,29 @@ namespace GLMS.Api.Models
         public int ContractStatusId { get; set; }
 
         [StringLength(100)]
-        public string ServiceLevel { get; set; }
+        public string ServiceLevel { get; set; } = string.Empty;
 
         [StringLength(1000)]
-        public string Notes { get; set; }
+        public string Notes { get; set; } = string.Empty;
 
         [Required]
-        public string CreatedByUserId { get; set; }
+        public string CreatedByUserId { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         //foreign key relationships
         [ForeignKey("ClientId")]
-        public Client Client { get; set; }
+        public Client Client { get; set; } = null!;
 
         [ForeignKey("ContractStatusId")]
-        public ContractStatus ContractStatus { get; set; }
+        public ContractStatus ContractStatus { get; set; } = null!;
 
         [ForeignKey("CreatedByUserId")]
-        public ApplicationUser CreatedByUser { get; set; }
+        public ApplicationUser CreatedByUser { get; set; } = null!;
 
         //navigation properties
         public ICollection<ContractDocument> Documents { get; set; } = new List<ContractDocument>();
         public ICollection<ServiceRequest> ServiceRequests { get; set; } = new List<ServiceRequest>();
     }
 }
-
-//.....................................o0oEND OF FILEo0o..........................................//
-

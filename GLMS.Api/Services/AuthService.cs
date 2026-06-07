@@ -2,14 +2,13 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using GLMS.Api.DTOs.Auth;
+using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
+using GLMS.Api.Results;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 
-//ST10445500 - PROG7311 - GLMS POE
-//AuthService
 
-//.....................................o0oSTART OF FILEo0o........................................//
 
 namespace GLMS.Api.Services
 {
@@ -64,7 +63,7 @@ namespace GLMS.Api.Services
 
             var roles = await _userManager.GetRolesAsync(user);
             var token = CreateToken(user, roles);
-            return AuthServiceResult<AuthResponseDto>.Success(ToAuthResponse(user, roles, token.Token, token.ExpiresAt));
+            return AuthServiceResult<AuthResponseDto>.Success(user.ToAuthResponseDto(roles, token.Token, token.ExpiresAt));
         }
 
         //..............................................................................//
@@ -115,7 +114,7 @@ namespace GLMS.Api.Services
             }
 
             var roles = await _userManager.GetRolesAsync(user);
-            return AuthServiceResult<AuthResponseDto>.Success(ToAuthResponse(user, roles));
+            return AuthServiceResult<AuthResponseDto>.Success(user.ToAuthResponseDto(roles));
         }
 
         //..............................................................................//
@@ -138,7 +137,7 @@ namespace GLMS.Api.Services
             }
 
             var roles = await _userManager.GetRolesAsync(user);
-            return AuthServiceResult<AuthResponseDto>.Success(ToAuthResponse(user, roles));
+            return AuthServiceResult<AuthResponseDto>.Success(user.ToAuthResponseDto(roles));
         }
 
         //..............................................................................//
@@ -193,26 +192,6 @@ namespace GLMS.Api.Services
 
         //..............................................................................//
 
-        private static AuthResponseDto ToAuthResponse(
-            ApplicationUser user,
-            IList<string> roles,
-            string token = "",
-            DateTime expiresAt = default)
-        {
-            return new AuthResponseDto
-            {
-                Token = token,
-                ExpiresAt = expiresAt,
-                UserId = user.Id,
-                Email = user.Email ?? string.Empty,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Roles = roles.ToList()
-            };
-        }
-
-        //..............................................................................//
     }
 }
 
-//.....................................o0oEND OF FILEo0o........................................//
