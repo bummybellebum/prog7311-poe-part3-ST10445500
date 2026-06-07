@@ -1,0 +1,104 @@
+﻿@model GLMS.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="mb-4">
+    <h1 class="h3 mb-1">GLMS Dashboard</h1>
+    <p class="text-muted mb-0">Global Logistics Management System overview.</p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Clients</div>
+                <div class="display-6 fw-semibold">@Model.TotalClients</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Contracts</div>
+                <div class="display-6 fw-semibold">@Model.TotalContracts</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Active Contracts</div>
+                <div class="display-6 fw-semibold">@Model.ActiveContracts</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Service Requests</div>
+                <div class="display-6 fw-semibold">@Model.TotalServiceRequests</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h5">Navigate</h2>
+                <p class="text-muted small mb-3">Jump to the main management pages.</p>
+                <div class="d-grid gap-2 mt-3">
+                    <a asp-controller="Clients" asp-action="Index" class="btn btn-outline-primary">Manage Clients</a>
+                    <a asp-controller="Contracts" asp-action="Index" class="btn btn-outline-primary">Manage Contracts</a>
+                    <a asp-controller="ServiceRequests" asp-action="Index" class="btn btn-outline-primary">Manage Service Requests</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body p-0">
+                <div class="p-3 border-bottom">
+                    <h2 class="h5 mb-0">Recent Service Requests</h2>
+                </div>
+
+                @if (!Model.RecentServiceRequests.Any())
+                {
+                    <div class="p-4 text-muted text-center">No recent service requests available.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Contract</th>
+                                    <th>Status</th>
+                                    <th>Requested</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.RecentServiceRequests)
+                                {
+                                    <tr>
+                                        <td>@item.ContractTitle</td>
+                                        <td>@await Html.PartialAsync("_StatusBadge", item.StatusName)</td>
+                                        <td>@item.RequestedAt.ToString("yyyy-MM-dd")</td>
+                                        <td class="text-end">
+                                            <a asp-controller="ServiceRequests" asp-action="Create" asp-route-contractId="@item.ContractId" class="btn btn-sm btn-success">+ Similar</a>
+                                            <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@item.ServiceRequestId" class="btn btn-sm btn-outline-secondary">Details</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

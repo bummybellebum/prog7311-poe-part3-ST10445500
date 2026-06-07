@@ -1,0 +1,148 @@
+@model GLMS.ViewModels.Contracts.ContractDetailsViewModel
+@{
+    ViewData["Title"] = "Contract Details";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">@Model.Contract.Title</h1>
+        <p class="text-muted mb-0">Contract details, signed agreement, and related service requests.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Contract.ContractId" class="btn btn-primary">Edit</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Contract Information</h2>
+                <div class="row g-2">
+                    <div class="col-md-6"><strong>Title:</strong> @Model.Contract.Title</div>
+                    <div class="col-md-6"><strong>Client:</strong> @(Model.Contract.Client?.CompanyName ?? "-")</div>
+                    <div class="col-md-4"><strong>Status:</strong> @await Html.PartialAsync("_StatusBadge", Model.Contract.ContractStatus?.StatusName ?? "Unknown")</div>
+                    <div class="col-md-4"><strong>Service Level:</strong> @(Model.Contract.ServiceLevel ?? "-")</div>
+                    <div class="col-md-4"><strong>Contract ID:</strong> @Model.Contract.ContractId</div>
+                    <div class="col-md-4"><strong>Start Date:</strong> @Model.Contract.StartDate.ToString("yyyy-MM-dd")</div>
+                    <div class="col-md-4"><strong>End Date:</strong> @Model.Contract.EndDate.ToString("yyyy-MM-dd")</div>
+                    <div class="col-md-4"><strong>Created:</strong> @Model.Contract.CreatedAt.ToString("yyyy-MM-dd")</div>
+                </div>
+                <hr />
+                <div>
+                    <strong>Notes</strong>
+                    <p class="mb-0 mt-1 text-muted">@(string.IsNullOrWhiteSpace(Model.Contract.Notes) ? "No notes recorded." : Model.Contract.Notes)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <h2 class="h5">Signed Agreement</h2>
+
+                @if (Model.CurrentSignedAgreement != null)
+                {
+                    <div class="mb-2">
+                        <div class="fw-semibold">@Model.CurrentSignedAgreement.OriginalFileName</div>
+                        <div class="small text-muted">Uploaded @Model.CurrentSignedAgreement.UploadedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                    </div>
+                    <a asp-action="DownloadAgreement" asp-route-id="@Model.CurrentSignedAgreement.ContractDocumentId" class="btn btn-outline-primary btn-sm">Download Current PDF</a>
+                }
+                else
+                {
+                    <div class="text-muted mb-2">No signed agreement uploaded yet.</div>
+                }
+
+                <hr />
+
+                <form asp-action="UploadSignedAgreement" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="ContractId" value="@Model.Contract.ContractId" />
+                    <div class="mb-2">
+                        <label class="form-label">Upload Signed Agreement (PDF)</label>
+                        <input type="file" name="File" accept=".pdf,application/pdf" class="form-control" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Upload PDF</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 mb-2">Document History</h2>
+                @if (!Model.Documents.Any())
+                {
+                    <div class="text-muted small">No contract documents recorded.</div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var doc in Model.Documents.Take(5))
+                        {
+                            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                                <span class="small text-truncate me-2">@doc.OriginalFileName</span>
+                                <a asp-action="DownloadAgreement" asp-route-id="@doc.ContractDocumentId" class="btn btn-sm btn-outline-secondary">Download</a>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+            <h2 class="h5 mb-0">Related Service Requests</h2>
+            <a asp-controller="ServiceRequests" asp-action="Create" class="btn btn-sm btn-outline-primary">Create Request</a>
+        </div>
+
+        @if (!Model.ServiceRequests.Any())
+        {
+            <div class="p-4 text-center text-muted">No service requests linked to this contract.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Status</th>
+                            <th>Original Amount</th>
+                            <th>ZAR Amount</th>
+                            <th>Requested</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var sr in Model.ServiceRequests)
+                        {
+                            <tr>
+                                <td>@await Html.PartialAsync("_StatusBadge", sr.ServiceRequestStatus?.StatusName ?? "Unknown")</td>
+                                <td>@sr.AmountOriginal.ToString("N2") @sr.OriginalCurrencyCode</td>
+                                <td>@sr.AmountZAR.ToString("N2")</td>
+                                <td>@sr.RequestedAt.ToString("yyyy-MM-dd")</td>
+                                <td class="text-end">
+                                    <a asp-controller="ServiceRequests" asp-action="Details" asp-route-id="@sr.ServiceRequestId" class="btn btn-sm btn-outline-secondary">Details</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

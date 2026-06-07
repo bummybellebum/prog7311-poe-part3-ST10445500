@@ -1,0 +1,100 @@
+@model GLMS.ViewModels.Contracts.ContractFilterViewModel
+@{
+    ViewData["Title"] = "Contracts";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">Contracts</h1>
+        <p class="text-muted mb-0">Search and manage contract lifecycle records.</p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">Add Contract</a>
+</div>
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label asp-for="StatusId" class="form-label">Status</label>
+                <select asp-for="StatusId" asp-items="Model.StatusOptions" class="form-select">
+                    <option value="">All statuses</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="ClientId" class="form-label">Client</label>
+                <select asp-for="ClientId" asp-items="Model.ClientOptions" class="form-select">
+                    <option value="">All clients</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="StartDate" class="form-label">Start Date</label>
+                <input asp-for="StartDate" class="form-control" type="date" />
+            </div>
+            <div class="col-md-2">
+                <label asp-for="EndDate" class="form-label">End Date</label>
+                <input asp-for="EndDate" class="form-control" type="date" />
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-primary w-100">Filter</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        @if (!Model.Contracts.Any())
+        {
+            <div class="p-4 text-center text-muted">No contracts match the selected filters.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Title</th>
+                            <th>Client</th>
+                            <th>Status</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th class="text-center">Service Requests</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var contract in Model.Contracts)
+                        {
+                            <tr>
+                                <td>@contract.Title</td>
+                                <td>@(contract.Client?.CompanyName ?? "-")</td>
+                                <td>@await Html.PartialAsync("_StatusBadge", contract.ContractStatus?.StatusName ?? "Unknown")</td>
+                                <td>@contract.StartDate.ToString("yyyy-MM-dd")</td>
+                                <td>@contract.EndDate.ToString("yyyy-MM-dd")</td>
+                                <td class="text-center">
+                                    <a asp-controller="ServiceRequests" asp-action="Index" asp-route-contractId="@contract.ContractId" class="btn btn-sm btn-outline-secondary">View</a>
+                                </td>
+                                <td class="text-end">
+                                    <a asp-controller="ServiceRequests" asp-action="Create" asp-route-contractId="@contract.ContractId" class="btn btn-sm btn-success">+ Request</a>
+                                    <a asp-action="Details" asp-route-id="@contract.ContractId" class="btn btn-sm btn-outline-secondary">Details</a>
+                                    <a asp-action="Edit" asp-route-id="@contract.ContractId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <a asp-action="Delete" asp-route-id="@contract.ContractId" class="btn btn-sm btn-outline-danger">Delete</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

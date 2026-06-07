@@ -1,0 +1,82 @@
+@model GLMS.ViewModels.Clients.ClientDetailsViewModel
+@{
+    ViewData["Title"] = "Client Details";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">@Model.Client.CompanyName</h1>
+        <p class="text-muted mb-0">Client profile and related contract summary.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Client.ClientId" class="btn btn-primary">Edit</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Total Contracts</div><div class="h4 mb-0">@Model.ContractCount</div></div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Active Contracts</div><div class="h4 mb-0">@Model.ActiveContractCount</div></div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Status</div><div>@await Html.PartialAsync("_StatusBadge", Model.Client.IsActive ? "Active" : "Inactive")</div></div></div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <h2 class="h5">Contact Information</h2>
+        <div class="row g-2">
+            <div class="col-md-4"><strong>Email:</strong> @Model.Client.Email</div>
+            <div class="col-md-4"><strong>Phone:</strong> @(Model.Client.Phone ?? "-")</div>
+            <div class="col-md-4"><strong>Region:</strong> @(Model.Client.Region ?? "-")</div>
+            <div class="col-md-4"><strong>Country:</strong> @(Model.Client.Country ?? "-")</div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="p-3 border-bottom">
+            <h2 class="h5 mb-0">Related Contracts</h2>
+        </div>
+
+        @if (!Model.Client.Contracts.Any())
+        {
+            <div class="p-4 text-center text-muted">No contracts available for this client.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var contract in Model.Client.Contracts.OrderByDescending(c => c.CreatedAt))
+                        {
+                            <tr>
+                                <td>@contract.Title</td>
+                                <td>@await Html.PartialAsync("_StatusBadge", contract.ContractStatus?.StatusName ?? "Unknown")</td>
+                                <td>@contract.StartDate.ToString("yyyy-MM-dd")</td>
+                                <td>@contract.EndDate.ToString("yyyy-MM-dd")</td>
+                                <td class="text-end">
+                                    <a asp-controller="Contracts" asp-action="Details" asp-route-id="@contract.ContractId" class="btn btn-sm btn-outline-secondary">View Contract</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
