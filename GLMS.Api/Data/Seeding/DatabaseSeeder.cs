@@ -36,6 +36,7 @@ namespace GLMS.Api.Data.Seeding
 				userManager,
 				roleManager,
 				app.Configuration,
+				app.Environment,
 				forceSeeding);
 		}
 
