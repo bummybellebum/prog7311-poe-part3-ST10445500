@@ -35,6 +35,10 @@ namespace GLMS.Api.Data.Seeding
 
 			if (databaseHasData && !forceSeeding)
 			{
+				await DemoSeedData.EnsureDemoContractFilesAsync(
+					context,
+					app.Configuration,
+					app.Environment);
 				return;
 			}
 

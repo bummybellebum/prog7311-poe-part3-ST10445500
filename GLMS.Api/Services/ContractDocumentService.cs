@@ -440,11 +440,16 @@ namespace GLMS.Api.Services
                 {
                     candidates.Add(normalizedFilePath);
                 }
-                else
-                {
-                    candidates.Add(Path.Combine(_environment.ContentRootPath, normalizedFilePath));
-                }
-            }
+				else
+				{
+					candidates.Add(Path.Combine(_environment.ContentRootPath, normalizedFilePath));
+
+					if (!string.IsNullOrWhiteSpace(_environment.WebRootPath))
+					{
+						candidates.Add(Path.Combine(_environment.WebRootPath, normalizedFilePath));
+					}
+				}
+			}
 
             if (!string.IsNullOrWhiteSpace(document.StoredFileName))
             {

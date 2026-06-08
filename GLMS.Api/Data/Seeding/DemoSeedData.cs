@@ -30,10 +30,59 @@ namespace GLMS.Api.Data.Seeding
 			var clients = await SeedClientsAsync(context);
 			var contracts = await SeedContractsAsync(context, clients, users.ContractManager.Id);
 
-			await SeedContractDocumentsAsync(context, contracts, users.Admin.Id, environment);
+			await SeedContractDocumentsAsync(context, contracts, users.Admin.Id, configuration, environment);
 			await SeedServiceRequestsAsync(context, contracts, users.LogisticsManager.Id);
 
 			await context.SaveChangesAsync();
+		}
+
+		public static async Task EnsureDemoContractFilesAsync(
+			ApplicationDbContext context,
+			IConfiguration configuration,
+			IWebHostEnvironment environment)
+		{
+			var demoDocuments = await context.ContractDocuments
+				.Join(
+					context.Contracts,
+					document => document.ContractId,
+					contract => contract.ContractId,
+					(document, contract) => new { Document = document, ContractTitle = contract.Title })
+				.Where(item =>
+					item.Document.DocumentType == "Signed Agreement" &&
+					item.Document.IsCurrent)
+				.ToListAsync();
+
+			bool changed = false;
+
+			foreach (var item in demoDocuments)
+			{
+				var safeName = ToSafeFileName(item.ContractTitle);
+				var expectedStoredFileName = $"{safeName}-signed-agreement.pdf";
+
+				if (!string.Equals(item.Document.StoredFileName, expectedStoredFileName, StringComparison.OrdinalIgnoreCase))
+				{
+					continue;
+				}
+
+				var file = await CreateDemoPdfFileAsync(configuration, environment, expectedStoredFileName, item.ContractTitle);
+
+				if (!string.Equals(item.Document.FilePath, file.RelativePath, StringComparison.OrdinalIgnoreCase))
+				{
+					item.Document.FilePath = file.RelativePath;
+					changed = true;
+				}
+
+				if (item.Document.FileSizeBytes != file.SizeBytes)
+				{
+					item.Document.FileSizeBytes = file.SizeBytes;
+					changed = true;
+				}
+			}
+
+			if (changed)
+			{
+				await context.SaveChangesAsync();
+			}
 		}
 
 		private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
@@ -398,6 +447,7 @@ namespace GLMS.Api.Data.Seeding
 			ApplicationDbContext context,
 			Dictionary<string, Contract> contracts,
 			string uploadedByUserId,
+			IConfiguration configuration,
 			IWebHostEnvironment environment)
 		{
 			foreach (var contract in contracts.Values)
@@ -416,7 +466,7 @@ namespace GLMS.Api.Data.Seeding
 				var storedFileName = $"{safeName}-signed-agreement.pdf";
 				var originalFileName = $"{safeName}-original.pdf";
 
-				var file = await CreateDemoPdfFileAsync(environment, storedFileName, contract.Title);
+				var file = await CreateDemoPdfFileAsync(configuration, environment, storedFileName, contract.Title);
 
 				context.ContractDocuments.Add(new ContractDocument
 				{
@@ -521,19 +571,12 @@ namespace GLMS.Api.Data.Seeding
 		}
 
 		private static async Task<DemoFile> CreateDemoPdfFileAsync(
+			IConfiguration configuration,
 			IWebHostEnvironment environment,
 			string storedFileName,
 			string contractTitle)
 		{
-			var webRootPath = environment.WebRootPath;
-
-			if (string.IsNullOrWhiteSpace(webRootPath))
-			{
-				webRootPath = Path.Combine(environment.ContentRootPath, "wwwroot");
-			}
-
-			var relativeFolder = Path.Combine("uploads", "signed-agreements");
-			var fullFolder = Path.Combine(webRootPath, relativeFolder);
+			var fullFolder = GetSignedAgreementUploadFolder(configuration, environment);
 
 			Directory.CreateDirectory(fullFolder);
 
@@ -546,9 +589,51 @@ namespace GLMS.Api.Data.Seeding
 			}
 
 			var fileInfo = new FileInfo(fullPath);
-			var relativePath = Path.Combine(relativeFolder, storedFileName).Replace("\\", "/");
+			var relativePath = BuildDatabaseFilePath(configuration, storedFileName);
 
 			return new DemoFile(relativePath, fileInfo.Length);
+		}
+
+		private static string GetSignedAgreementUploadFolder(
+			IConfiguration configuration,
+			IWebHostEnvironment environment)
+		{
+			var configuredFolder = configuration["Uploads:SignedAgreementFolder"];
+			var folder = string.IsNullOrWhiteSpace(configuredFolder)
+				? Path.Combine("uploads", "signed-agreements")
+				: configuredFolder;
+
+			if (Path.IsPathRooted(folder))
+			{
+				return Path.GetFullPath(folder);
+			}
+
+			return Path.GetFullPath(Path.Combine(environment.ContentRootPath, folder));
+		}
+
+		private static string BuildDatabaseFilePath(IConfiguration configuration, string storedFileName)
+		{
+			var configuredFolder = configuration["Uploads:SignedAgreementFolder"];
+			var relativeFolder = string.IsNullOrWhiteSpace(configuredFolder) || Path.IsPathRooted(configuredFolder)
+				? Path.Combine("uploads", "signed-agreements")
+				: CleanRelativeFolder(configuredFolder);
+
+			return Path.Combine(relativeFolder, storedFileName).Replace("\\", "/");
+		}
+
+		private static string CleanRelativeFolder(string folder)
+		{
+			var parts = folder
+				.Replace("\\", "/")
+				.Split('/', StringSplitOptions.RemoveEmptyEntries)
+				.Where(part => part != ".");
+
+			if (parts.Any(part => part == ".."))
+			{
+				throw new InvalidOperationException("Invalid upload folder configuration.");
+			}
+
+			return string.Join("/", parts);
 		}
 
 		private static byte[] BuildDemoPdfBytes(string contractTitle)
