@@ -129,12 +129,6 @@
                         <span>@pageTitle</span>
                     </div>
                     <div class="topbar-actions">
-                        <button class="topbar-icon-button" type="button" aria-label="Notifications">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 1 0-12 0c0 7-2.5 7-2.5 7h17S18 16 18 9" /><path d="M9.8 19a2.3 2.3 0 0 0 4.4 0" /></svg>
-                        </button>
-                        <button class="topbar-icon-button" type="button" aria-label="Help">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.7 9a2.5 2.5 0 0 1 4.8 1c0 1.8-2.4 2-2.4 3.6" /><path d="M12 17h.1" /></svg>
-                        </button>
                         <a class="account-pill" asp-controller="Account" asp-action="Profile">
                             <span class="account-avatar" aria-hidden="true">@userInitial</span>
                             <span class="account-copy">
@@ -142,6 +136,11 @@
                                 <span class="account-role">@roleName</span>
                             </span>
                         </a>
+                        <form class="topbar-logout-form" asp-controller="Account" asp-action="Logout" method="post">
+                            <button type="submit" class="topbar-logout-button" aria-label="Logout">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6.5A1.5 1.5 0 0 0 5 6.5v11A1.5 1.5 0 0 0 6.5 19H10" /><path d="M14 8l4 4-4 4" /><path d="M18 12H9" /></svg>
+                            </button>
+                        </form>
                     </div>
                 </header>
 
