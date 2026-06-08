@@ -25,9 +25,9 @@
 
 ## What is GLMS?
 
-**TechMove Logistics** is a fictional global freight coordinator that was still relying on spreadsheets, email threads, and manual phone calls. For this project, I built **GLMS** as an enterprise-style system that could manage clients, contracts, service requests, and international invoicing in a more structured way.
+**TechMove Logistics** is a fictional global freight coordinator that was still relying on spreadsheets, email threads, and manual phone calls. For this project, I built **GLMS** as a structured system that could manage clients, contracts, service requests, and international invoicing in one place.
 
-I developed the project across three POE parts. It started as an architecture report, became a working ASP.NET Core MVC prototype, and then evolved into a containerised, service-oriented .NET solution with a separate API backend, MVC frontend, automated tests, and Docker Compose deployment.
+I developed the project across three POE parts. It started as an architecture report, became a working ASP.NET Core MVC prototype, and then evolved into a containerised project with a separate API backend, MVC frontend, automated tests, and Docker Compose setup.
 
 The system lets TechMove staff:
 
@@ -42,7 +42,7 @@ The system lets TechMove staff:
 
 ## Running the App
 
-I recommend running the project with Docker Compose because it starts the SQL Server database, API, and MVC frontend together.
+I recommend running the project with Docker Compose because it starts the SQL Server database, API, and MVC frontend together with one command.
 
 Make sure Docker Desktop is running, then run this from the repo root:
 
@@ -67,7 +67,7 @@ To do a full reset, including wiping the database and uploaded files:
 docker compose down -v
 ```
 
-> The `.env` file supplies demo values such as the SA password and JWT key. I would not use these as real production secrets; they are included for local demo and marking purposes.
+> The `.env` file supplies demo values such as the SA password and JWT key. These are included for local demo and marking purposes, not for a real deployed system.
 
 ---
 
@@ -155,15 +155,15 @@ I built the project in three parts, with each part building on the previous one:
 
 | Part | What I Built |
 |------|--------------|
-| **Part 1 - Architecture Report** | I designed the system, chose the Zachman enterprise framework, selected GoF design patterns, and planned scalability strategies. This part was the blueprint before coding started. |
+| **Part 1 - Architecture Report** | I designed the system, chose the Zachman framework, selected GoF design patterns, and planned how the project could grow. This part was the blueprint before coding started. |
 | **Part 2 - Core Prototype** | I built a working ASP.NET Core MVC monolith with clients, contracts, service requests, PDF uploads, currency conversion, and unit tests. |
-| **Part 3 - Modernisation** | I refactored the project into a service-oriented architecture by splitting the backend into its own Web API, containerising the stack with Docker Compose, and adding integration tests. |
+| **Part 3 - Modernisation** | I split the project into a separate Web API and MVC frontend, containerised the stack with Docker Compose, and added integration tests. |
 
 ---
 
 ## Final Architecture
 
-The final version is a three-tier, service-oriented system:
+The final version is split into three main parts:
 
 ```text
 Browser
@@ -178,7 +178,7 @@ GLMS.Api  (ASP.NET Core Web API backend)
 SQL Server database
 ```
 
-**Why I split it up:** the MVC frontend no longer talks to the database directly. It sends HTTP requests to the API, and the API owns the business rules, validation, file handling, authentication, and database access. This makes the frontend and backend easier to deploy, scale, and update independently.
+**Why I split it up:** the MVC frontend no longer talks to the database directly. It sends HTTP requests to the API, and the API handles the business rules, validation, file handling, authentication, and database access. This makes the frontend and backend easier to manage separately.
 
 ### Projects in the Solution
 
@@ -210,9 +210,9 @@ SQL Server database
 
 ### Why Docker?
 
-One of the biggest problems in software development is the classic *"it works on my machine"* issue. A developer's laptop, a lecturer's PC, and a cloud server can all have different operating systems, installed tools, and configuration values.
+One of the problems Docker helps with is the *"it works on my machine"* issue. Different computers can have different installed tools and settings, which can make a project harder to run consistently.
 
-Docker helps solve this by packaging an application and its runtime dependencies into a container image. Docker Compose then lets me define the database, API, and frontend containers in one `docker-compose.yml` file and start the full stack with one command.
+Docker lets me run each main part of the project in a container. Docker Compose then lets me define the database, API, and frontend in one `docker-compose.yml` file and start everything together.
 
 ### My Docker Setup
 
@@ -223,7 +223,7 @@ docker-compose.yml
   `-- glms-web      -> ASP.NET Core MVC frontend container
 ```
 
-The containers communicate through Docker's internal network. The API connects to SQL Server using the service name `glms-db`, and the MVC frontend connects to the API using `http://glms-api:8080/`. This keeps the container setup portable instead of depending on local machine paths or localhost-only connections.
+The containers communicate through Docker's internal network. The API connects to SQL Server using the service name `glms-db`, and the MVC frontend connects to the API using `http://glms-api:8080/`. This means the containers can find each other by service name instead of relying on my local machine setup.
 
 Persistent data is handled with Docker volumes:
 
@@ -261,9 +261,9 @@ dotnet test .\GLMS.Tests\GLMS.Tests.csproj
 - Correct HTTP status codes and JSON responses
 - End-to-end flows such as create, read, and verify
 
-The integration tests use an InMemory database, fake authentication, and a fake currency service. That means they are isolated and repeatable without needing a running SQL Server instance or a live call to the Frankfurter API.
+The integration tests use an InMemory database, fake authentication, and a fake currency service. This means I can test the API without needing SQL Server or the Frankfurter API to be running.
 
-The repo also includes a GitHub Actions CI workflow at `.github/workflows/CI.yml`. It runs restore, build, test, and Docker image build checks on pushes and pull requests to `main`.
+The repo also includes a GitHub Actions CI workflow at `.github/workflows/CI.yml`. It runs restore, build, test, and Docker image build checks when changes are pushed or opened as pull requests on `main`.
 
 See the [Automated Tests screenshots](#automated-tests---local--ci) above for the local and CI test evidence.
 
