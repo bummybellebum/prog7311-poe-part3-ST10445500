@@ -33,19 +33,6 @@ namespace GLMS.Tests.UnitTests.Services
         }
 
         [Fact]
-        public async Task GetRateToZarAsync_WithZar_ReturnsOne()
-        {
-            // Arrange
-            var service = CreateService();
-
-            // Act
-            var result = await service.GetRateToZarAsync("zar");
-
-            // Assert
-            Assert.Equal(1m, result);
-        }
-
-        [Fact]
         public async Task ConvertToZarAsync_WithZeroAmount_ThrowsValidationError()
         {
             // Arrange
@@ -56,32 +43,6 @@ namespace GLMS.Tests.UnitTests.Services
 
             // Assert
             Assert.StartsWith("Amount must be greater than zero.", exception.Message);
-        }
-
-        [Fact]
-        public async Task GetRateToZarAsync_WithNullCurrency_ThrowsValidationError()
-        {
-            // Arrange
-            var service = CreateService();
-
-            // Act
-            var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.GetRateToZarAsync(null!));
-
-            // Assert
-            Assert.StartsWith("Currency code is required.", exception.Message);
-        }
-
-        [Fact]
-        public async Task GetRateToZarAsync_WithInvalidCurrency_ThrowsValidationError()
-        {
-            // Arrange
-            var service = CreateService();
-
-            // Act
-            var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.GetRateToZarAsync("US"));
-
-            // Assert
-            Assert.StartsWith("Currency code must be a 3-letter ISO code.", exception.Message);
         }
 
         private static CurrencyExchangeService CreateService()

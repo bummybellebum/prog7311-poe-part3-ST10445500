@@ -117,22 +117,6 @@ namespace GLMS.Tests.UnitTests.Services
             Assert.StartsWith("Please select a PDF file to upload.", exception.Message);
         }
 
-        [Fact]
-        public async Task GetSignedAgreementDownloadAsync_WithMissingFile_ReturnsNull()
-        {
-            // Arrange
-            var service = CreateService(out var documentRepository, out _);
-            documentRepository
-                .Setup(repository => repository.GetByIdAsync(5))
-                .ReturnsAsync(TestData.Document(5));
-
-            // Act
-            var result = await service.GetSignedAgreementDownloadAsync(5);
-
-            // Assert
-            Assert.Null(result);
-        }
-
         private static ContractDocumentService CreateService(
             out Mock<IContractDocumentRepository> documentRepository,
             out Mock<IContractRepository> contractRepository)

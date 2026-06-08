@@ -390,7 +390,7 @@ If only the admin account is currently seeded, the ContractManager and Logistics
 
 ## Testing
 
-GLMS includes a small automated test suite focused on the POE requirements. The tests are in one xUnit project, `GLMS.Tests`, with unit tests for business rules and integration tests for API endpoints.
+GLMS includes a small automated test suite focused on the POE requirements. The tests are in one xUnit project, `GLMS.Tests`, with unit tests for business rules and integration tests for API endpoints. The suite is intentionally kept compact so the marking evidence focuses on the required workflows instead of broad enterprise-level coverage.
 
 ### Running Tests
 
@@ -428,7 +428,8 @@ Unit tests cover selected service, repository, and validation logic, including:
 - blocked requests for Expired contracts
 - blocked requests for On Hold contracts
 - contract search/filter behaviour
-- repository behaviour where appropriate
+
+Controller unit tests and most repository tests are intentionally skipped. The POE rubric prioritises business logic unit tests and API endpoint integration tests, and the integration tests already prove the controller routing and HTTP responses through the real API pipeline.
 
 The currency tests use fake HTTP responses. They do not call the live Frankfurter exchange API.
 
