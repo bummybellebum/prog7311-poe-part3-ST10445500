@@ -1,5 +1,5 @@
 using GLMS.Web.Security;
-using GLMS.Web.Services;
+using GLMS.Web.ApiClients;
 using GLMS.Web.ApiModels;
 using GLMS.Web.Mappings;
 using GLMS.Web.ViewModels.Contracts;
@@ -17,30 +17,34 @@ namespace GLMS.Web.Controllers
     [Authorize(Roles = ApplicationRoles.AllRoles)]
     public class ContractsController : Controller
     {
-        private readonly IContractService _contractService;
-        private readonly IClientService _clientService;
-        private readonly ILookupService _lookupService;
-        private readonly IContractDocumentService _contractDocumentService;
+        private readonly IContractsApiClient _contractsApiClient;
+        private readonly IClientsApiClient _clientsApiClient;
+        private readonly ILookupsApiClient _lookupsApiClient;
 
         public ContractsController(
-            IContractService contractService,
-            IClientService clientService,
-            ILookupService lookupService,
-            IContractDocumentService contractDocumentService)
+            IContractsApiClient contractsApiClient,
+            IClientsApiClient clientsApiClient,
+            ILookupsApiClient lookupsApiClient)
         {
-            _contractService = contractService;
-            _clientService = clientService;
-            _lookupService = lookupService;
-            _contractDocumentService = contractDocumentService;
+            _contractsApiClient = contractsApiClient;
+            _clientsApiClient = clientsApiClient;
+            _lookupsApiClient = lookupsApiClient;
         }
 
         //........................................................................................//
 
         public async Task<IActionResult> Index(ContractFilterViewModel filter)
         {
-            var contracts = await _contractService.FilterAsync(filter.StatusId, filter.StartDate, filter.EndDate, filter.ClientId);
+            var result = await _contractsApiClient.FilterAsync(filter.StatusId, filter.StartDate, filter.EndDate, filter.ClientId);
+            if (!result.IsSuccess)
+            {
+                ViewData["ErrorMessage"] = result.ErrorMessage;
+                filter.Contracts = [];
+                await PopulateFilterOptionsAsync(filter);
+                return View(filter);
+            }
 
-            filter.Contracts = contracts
+            filter.Contracts = result.Data!
                 .OrderByDescending(c => c.CreatedAt)
                 .Select(c => c.ToListViewModel())
                 .ToList();
@@ -53,15 +57,16 @@ namespace GLMS.Web.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
-            var contract = await _contractService.GetDetailsAsync(id);
-            if (contract == null)
+            var contractResult = await _contractsApiClient.GetDetailsAsync(id);
+            if (!contractResult.IsSuccess || contractResult.Data == null)
             {
                 return NotFound();
             }
 
+            var contract = contractResult.Data;
             var documents = contract.Documents.Any()
                 ? contract.Documents
-                : await _contractDocumentService.GetByContractIdAsync(id);
+                : (await _contractsApiClient.GetDocumentsByContractIdAsync(id)).Data ?? [];
             var current = documents.FirstOrDefault(d => d.IsCurrent);
 
             var vm = new ContractDetailsViewModel
@@ -75,8 +80,8 @@ namespace GLMS.Web.Controllers
                     .ToList()
             };
 
-            var statuses = await _lookupService.GetContractStatusesAsync();
-            vm.StatusOptions = statuses
+            var statuses = await _lookupsApiClient.GetContractStatusesAsync();
+            vm.StatusOptions = (statuses.Data ?? [])
                 .OrderBy(s => s.Name)
                 .Select(s => new SelectListItem(s.Name, s.Id.ToString(), s.Id == contract.ContractStatusId))
                 .ToList();
@@ -121,24 +126,30 @@ namespace GLMS.Web.Controllers
                 return View(vm);
             }
 
-            try
+            var contract = new CreateContractDto
             {
-                var contract = new CreateContractDto
-                {
-                    ClientId = vm.ClientId,
-                    Title = vm.Title,
-                    StartDate = vm.StartDate,
-                    EndDate = vm.EndDate,
-                    ContractStatusId = vm.ContractStatusId,
-                    ServiceLevel = vm.ServiceLevel,
-                    Notes = vm.Notes
-                };
+                ClientId = vm.ClientId,
+                Title = vm.Title,
+                StartDate = vm.StartDate,
+                EndDate = vm.EndDate,
+                ContractStatusId = vm.ContractStatusId,
+                ServiceLevel = vm.ServiceLevel,
+                Notes = vm.Notes
+            };
 
-                var created = await _contractService.CreateAsync(contract);
-
+            var result = await _contractsApiClient.CreateAsync(contract);
+            if (result.IsSuccess && result.Data != null)
+            {
                 if (vm.SignedAgreementFile != null && vm.SignedAgreementFile.Length > 0)
                 {
-                    await _contractDocumentService.UploadSignedAgreementAsync(created.ContractId, vm.SignedAgreementFile);
+                    var uploadResult = await _contractsApiClient.UploadSignedAgreementAsync(result.Data.ContractId, vm.SignedAgreementFile);
+                    if (!uploadResult.IsSuccess)
+                    {
+                        ModelState.AddModelError(string.Empty, uploadResult.ErrorMessage ?? "The signed agreement could not be uploaded.");
+                        await PopulateFormOptionsAsync(vm);
+                        return View(vm);
+                    }
+
                     TempData["SuccessMessage"] = "Contract created successfully and signed agreement uploaded.";
                 }
                 else
@@ -148,12 +159,10 @@ namespace GLMS.Web.Controllers
 
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException || ex is KeyNotFoundException)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                await PopulateFormOptionsAsync(vm);
-                return View(vm);
-            }
+
+            AddError(result);
+            await PopulateFormOptionsAsync(vm);
+            return View(vm);
         }
 
         //........................................................................................//
@@ -161,12 +170,13 @@ namespace GLMS.Web.Controllers
         [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public async Task<IActionResult> Edit(int id)
         {
-            var contract = await _contractService.GetByIdAsync(id);
-            if (contract == null)
+            var result = await _contractsApiClient.GetByIdAsync(id);
+            if (!result.IsSuccess || result.Data == null)
             {
                 return NotFound();
             }
 
+            var contract = result.Data;
             var vm = new ContractFormViewModel
             {
                 ContractId = contract.ContractId,
@@ -201,38 +211,37 @@ namespace GLMS.Web.Controllers
                 return View(vm);
             }
 
-            try
+            var existingResult = await _contractsApiClient.GetDetailsAsync(id);
+            if (!existingResult.IsSuccess || existingResult.Data == null)
             {
-                var existing = await _contractService.GetDetailsAsync(id);
-                if (existing == null)
-                {
-                    return NotFound();
-                }
+                return NotFound();
+            }
 
-                var dto = new UpdateContractDto
-                {
-                    ContractId = id,
-                    ClientId = vm.ClientId,
-                    Title = vm.Title,
-                    StartDate = vm.StartDate,
-                    EndDate = vm.EndDate,
-                    ContractStatusId = vm.ContractStatusId,
-                    ServiceLevel = vm.ServiceLevel,
-                    Notes = vm.Notes,
-                    CreatedByUserId = existing.CreatedByUserId,
-                    CreatedAt = existing.CreatedAt
-                };
+            var existing = existingResult.Data;
+            var dto = new UpdateContractDto
+            {
+                ContractId = id,
+                ClientId = vm.ClientId,
+                Title = vm.Title,
+                StartDate = vm.StartDate,
+                EndDate = vm.EndDate,
+                ContractStatusId = vm.ContractStatusId,
+                ServiceLevel = vm.ServiceLevel,
+                Notes = vm.Notes,
+                CreatedByUserId = existing.CreatedByUserId,
+                CreatedAt = existing.CreatedAt
+            };
 
-                await _contractService.UpdateAsync(dto);
+            var result = await _contractsApiClient.UpdateAsync(dto);
+            if (result.IsSuccess)
+            {
                 TempData["SuccessMessage"] = "Contract updated successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException || ex is KeyNotFoundException)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                await PopulateFormOptionsAsync(vm);
-                return View(vm);
-            }
+
+            AddError(result);
+            await PopulateFormOptionsAsync(vm);
+            return View(vm);
         }
 
         //........................................................................................//
@@ -240,13 +249,13 @@ namespace GLMS.Web.Controllers
         [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> Delete(int id)
         {
-            var contract = await _contractService.GetDetailsAsync(id);
-            if (contract == null)
+            var result = await _contractsApiClient.GetDetailsAsync(id);
+            if (!result.IsSuccess || result.Data == null)
             {
                 return NotFound();
             }
 
-            return View(contract.ToDeleteViewModel());
+            return View(result.Data.ToDeleteViewModel());
         }
 
         //........................................................................................//
@@ -256,17 +265,15 @@ namespace GLMS.Web.Controllers
         [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            try
+            var result = await _contractsApiClient.DeleteAsync(id);
+            if (result.IsSuccess)
             {
-                await _contractService.DeleteAsync(id);
                 TempData["SuccessMessage"] = "Contract deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is KeyNotFoundException || ex is InvalidOperationException)
-            {
-                TempData["ErrorMessage"] = ex.Message;
-                return RedirectToAction(nameof(Index));
-            }
+
+            TempData["ErrorMessage"] = result.ErrorMessage;
+            return RedirectToAction(nameof(Index));
         }
 
         //........................................................................................//
@@ -276,8 +283,8 @@ namespace GLMS.Web.Controllers
         [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public async Task<IActionResult> UploadSignedAgreement(ContractDocumentUploadViewModel vm)
         {
-            var contract = await _contractService.GetByIdAsync(vm.ContractId);
-            if (contract == null)
+            var contract = await _contractsApiClient.GetByIdAsync(vm.ContractId);
+            if (!contract.IsSuccess || contract.Data == null)
             {
                 return NotFound();
             }
@@ -294,14 +301,14 @@ namespace GLMS.Web.Controllers
                 return RedirectToAction(nameof(Details), new { id = vm.ContractId });
             }
 
-            try
+            var result = await _contractsApiClient.UploadSignedAgreementAsync(vm.ContractId, vm.File);
+            if (result.IsSuccess)
             {
-                await _contractDocumentService.UploadSignedAgreementAsync(vm.ContractId, vm.File);
                 TempData["SuccessMessage"] = "Signed agreement uploaded successfully.";
             }
-            catch (Exception ex)
+            else
             {
-                TempData["ErrorMessage"] = ex.Message;
+                TempData["ErrorMessage"] = result.ErrorMessage;
             }
 
             return RedirectToAction(nameof(Details), new { id = vm.ContractId });
@@ -314,14 +321,14 @@ namespace GLMS.Web.Controllers
         [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public async Task<IActionResult> UpdateStatus(int id, int contractStatusId)
         {
-            try
+            var result = await _contractsApiClient.UpdateStatusAsync(id, contractStatusId);
+            if (result.IsSuccess)
             {
-                await _contractService.UpdateStatusAsync(id, contractStatusId);
                 TempData["SuccessMessage"] = "Contract status updated successfully.";
             }
-            catch (Exception ex) when (ex is InvalidOperationException || ex is KeyNotFoundException)
+            else
             {
-                TempData["ErrorMessage"] = ex.Message;
+                TempData["ErrorMessage"] = result.ErrorMessage;
             }
 
             return RedirectToAction(nameof(Details), new { id });
@@ -332,35 +339,35 @@ namespace GLMS.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> DownloadAgreement(int id)
         {
-            var document = await _contractDocumentService.GetByIdAsync(id);
-            if (document == null)
+            var document = await _contractsApiClient.GetDocumentByIdAsync(id);
+            if (!document.IsSuccess || document.Data == null)
             {
                 return NotFound();
             }
 
-            var file = await _contractDocumentService.DownloadAgreementAsync(id);
-            if (file == null)
+            var file = await _contractsApiClient.DownloadAgreementAsync(id);
+            if (!file.IsSuccess || file.Data == null)
             {
-                TempData["ErrorMessage"] = "The agreement file could not be found on the server.";
-                return RedirectToAction(nameof(Details), new { id = document.ContractId });
+                TempData["ErrorMessage"] = file.ErrorMessage ?? "The agreement file could not be found on the server.";
+                return RedirectToAction(nameof(Details), new { id = document.Data.ContractId });
             }
 
-            return File(file.Bytes, file.ContentType, file.FileName);
+            return File(file.Data.Bytes, file.Data.ContentType, file.Data.FileName);
         }
 
         //........................................................................................//
 
         private async Task PopulateFilterOptionsAsync(ContractFilterViewModel vm)
         {
-            var statuses = await _lookupService.GetContractStatusesAsync();
-            var clients = await _clientService.GetAllAsync();
+            var statuses = await _lookupsApiClient.GetContractStatusesAsync();
+            var clients = await _clientsApiClient.GetAllAsync();
 
-            vm.StatusOptions = statuses
+            vm.StatusOptions = (statuses.Data ?? [])
                 .OrderBy(s => s.Name)
                 .Select(s => new SelectListItem(s.Name, s.Id.ToString()))
                 .ToList();
 
-            vm.ClientOptions = clients
+            vm.ClientOptions = (clients.Data ?? [])
                 .OrderBy(c => c.CompanyName)
                 .Select(c => new SelectListItem(c.CompanyName, c.ClientId.ToString()))
                 .ToList();
@@ -370,19 +377,26 @@ namespace GLMS.Web.Controllers
 
         private async Task PopulateFormOptionsAsync(ContractFormViewModel vm)
         {
-            var statuses = await _lookupService.GetContractStatusesAsync();
-            var clients = await _clientService.GetAllAsync();
+            var statuses = await _lookupsApiClient.GetContractStatusesAsync();
+            var clients = await _clientsApiClient.GetAllAsync();
 
-            vm.StatusOptions = statuses
+            vm.StatusOptions = (statuses.Data ?? [])
                 .OrderBy(s => s.Name)
                 .Select(s => new SelectListItem(s.Name, s.Id.ToString()))
                 .ToList();
 
-            vm.ClientOptions = clients
+            vm.ClientOptions = (clients.Data ?? [])
                 .Where(c => c.IsActive)
                 .OrderBy(c => c.CompanyName)
                 .Select(c => new SelectListItem(c.CompanyName, c.ClientId.ToString()))
                 .ToList();
+        }
+
+        //........................................................................................//
+
+        private void AddError(ApiClientResult result)
+        {
+            ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "The request could not be completed.");
         }
 
         private bool IsValidSignedAgreementPdf(IFormFile file)

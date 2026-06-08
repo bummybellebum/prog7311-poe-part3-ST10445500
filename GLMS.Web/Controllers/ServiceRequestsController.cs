@@ -1,5 +1,5 @@
 using GLMS.Web.Security;
-using GLMS.Web.Services;
+using GLMS.Web.ApiClients;
 using GLMS.Web.ApiModels;
 using GLMS.Web.Mappings;
 using GLMS.Web.ViewModels.ServiceRequests;
@@ -17,30 +17,34 @@ namespace GLMS.Web.Controllers
     [Authorize(Roles = ApplicationRoles.AllRoles)]
     public class ServiceRequestsController : Controller
     {
-        private readonly IServiceRequestService _serviceRequestService;
-        private readonly IContractService _contractService;
-        private readonly ILookupService _lookupService;
-        private readonly ICurrencyExchangeService _currencyExchangeService;
+        private readonly IServiceRequestsApiClient _serviceRequestsApiClient;
+        private readonly IContractsApiClient _contractsApiClient;
+        private readonly ILookupsApiClient _lookupsApiClient;
 
         public ServiceRequestsController(
-            IServiceRequestService serviceRequestService,
-            IContractService contractService,
-            ILookupService lookupService,
-            ICurrencyExchangeService currencyExchangeService)
+            IServiceRequestsApiClient serviceRequestsApiClient,
+            IContractsApiClient contractsApiClient,
+            ILookupsApiClient lookupsApiClient)
         {
-            _serviceRequestService = serviceRequestService;
-            _contractService = contractService;
-            _lookupService = lookupService;
-            _currencyExchangeService = currencyExchangeService;
+            _serviceRequestsApiClient = serviceRequestsApiClient;
+            _contractsApiClient = contractsApiClient;
+            _lookupsApiClient = lookupsApiClient;
         }
 
         //............................................................................................//
 
         public async Task<IActionResult> Index(ServiceRequestFilterViewModel filter)
         {
-            var requests = await _serviceRequestService.GetAllAsync(filter.ContractId, filter.StatusId);
+            var result = await _serviceRequestsApiClient.GetAllAsync(filter.ContractId, filter.StatusId);
+            if (!result.IsSuccess)
+            {
+                ViewData["ErrorMessage"] = result.ErrorMessage;
+                filter.Requests = [];
+                await PopulateFilterOptionsAsync(filter);
+                return View(filter);
+            }
 
-            filter.Requests = requests
+            filter.Requests = result.Data!
                 .OrderByDescending(r => r.RequestedAt)
                 .Select(r => r.ToListViewModel())
                 .ToList();
@@ -53,15 +57,16 @@ namespace GLMS.Web.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
-            var request = await _serviceRequestService.GetDetailsAsync(id);
-            if (request == null)
+            var result = await _serviceRequestsApiClient.GetDetailsAsync(id);
+            if (!result.IsSuccess || result.Data == null)
             {
                 return NotFound();
             }
 
-            var statuses = await _lookupService.GetServiceRequestStatusesAsync();
+            var request = result.Data;
+            var statuses = await _lookupsApiClient.GetServiceRequestStatusesAsync();
             var vm = request.ToDetailsViewModel();
-            vm.StatusOptions = statuses
+            vm.StatusOptions = (statuses.Data ?? [])
                 .OrderBy(s => s.Name)
                 .Select(s => new SelectListItem(s.Name, s.Id.ToString(), s.Id == request.ServiceRequestStatusId))
                 .ToList();
@@ -83,14 +88,15 @@ namespace GLMS.Web.Controllers
 
             await PopulateFormOptionsAsync(vm, includeOnlyActiveContracts: true);
 
-            try
+            var rateResult = await _serviceRequestsApiClient.GetRateToZarAsync(vm.OriginalCurrencyCode);
+            if (rateResult.IsSuccess)
             {
-                vm.ExchangeRateToZar = await _currencyExchangeService.GetRateToZarAsync(vm.OriginalCurrencyCode);
+                vm.ExchangeRateToZar = rateResult.Data;
             }
-            catch (Exception ex)
+            else
             {
                 vm.ExchangeRateToZar = 0m;
-                ViewData["CurrencyWarning"] = ex.Message;
+                ViewData["CurrencyWarning"] = rateResult.ErrorMessage;
             }
 
             if (contractId.HasValue)
@@ -124,27 +130,25 @@ namespace GLMS.Web.Controllers
                 return View(vm);
             }
 
-            try
+            var entity = new CreateServiceRequestDto
             {
-                var entity = new CreateServiceRequestDto
-                {
-                    ContractId = vm.ContractId,
-                    Description = vm.Description,
-                    AmountOriginal = vm.AmountOriginal,
-                    OriginalCurrencyCode = vm.OriginalCurrencyCode.Trim().ToUpperInvariant(),
-                    ServiceRequestStatusId = vm.ServiceRequestStatusId
-                };
+                ContractId = vm.ContractId,
+                Description = vm.Description,
+                AmountOriginal = vm.AmountOriginal,
+                OriginalCurrencyCode = vm.OriginalCurrencyCode.Trim().ToUpperInvariant(),
+                ServiceRequestStatusId = vm.ServiceRequestStatusId
+            };
 
-                await _serviceRequestService.CreateAsync(entity);
+            var result = await _serviceRequestsApiClient.CreateAsync(entity);
+            if (result.IsSuccess)
+            {
                 TempData["SuccessMessage"] = "Service request created successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is KeyNotFoundException)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                await PopulateFormOptionsAsync(vm, includeOnlyActiveContracts: true);
-                return View(vm);
-            }
+
+            AddError(result);
+            await PopulateFormOptionsAsync(vm, includeOnlyActiveContracts: true);
+            return View(vm);
         }
 
         //............................................................................................//
@@ -152,12 +156,13 @@ namespace GLMS.Web.Controllers
         [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> Edit(int id)
         {
-            var request = await _serviceRequestService.GetByIdAsync(id);
-            if (request == null)
+            var result = await _serviceRequestsApiClient.GetByIdAsync(id);
+            if (!result.IsSuccess || result.Data == null)
             {
                 return NotFound();
             }
 
+            var request = result.Data;
             var vm = new ServiceRequestFormViewModel
             {
                 ServiceRequestId = request.ServiceRequestId,
@@ -197,36 +202,35 @@ namespace GLMS.Web.Controllers
                 return View(vm);
             }
 
-            try
+            var existingResult = await _serviceRequestsApiClient.GetByIdAsync(id);
+            if (!existingResult.IsSuccess || existingResult.Data == null)
             {
-                var existing = await _serviceRequestService.GetByIdAsync(id);
-                if (existing == null)
-                {
-                    return NotFound();
-                }
+                return NotFound();
+            }
 
-                var dto = new UpdateServiceRequestDto
-                {
-                    ServiceRequestId = id,
-                    ContractId = vm.ContractId,
-                    RequestedByUserId = existing.RequestedByUserId,
-                    Description = vm.Description,
-                    AmountOriginal = vm.AmountOriginal,
-                    OriginalCurrencyCode = vm.OriginalCurrencyCode.Trim().ToUpperInvariant(),
-                    ServiceRequestStatusId = vm.ServiceRequestStatusId,
-                    RequestedAt = existing.RequestedAt
-                };
+            var existing = existingResult.Data;
+            var dto = new UpdateServiceRequestDto
+            {
+                ServiceRequestId = id,
+                ContractId = vm.ContractId,
+                RequestedByUserId = existing.RequestedByUserId,
+                Description = vm.Description,
+                AmountOriginal = vm.AmountOriginal,
+                OriginalCurrencyCode = vm.OriginalCurrencyCode.Trim().ToUpperInvariant(),
+                ServiceRequestStatusId = vm.ServiceRequestStatusId,
+                RequestedAt = existing.RequestedAt
+            };
 
-                await _serviceRequestService.UpdateAsync(dto);
+            var result = await _serviceRequestsApiClient.UpdateAsync(dto);
+            if (result.IsSuccess)
+            {
                 TempData["SuccessMessage"] = "Service request updated successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is KeyNotFoundException)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                await PopulateFormOptionsAsync(vm, includeOnlyActiveContracts: false);
-                return View(vm);
-            }
+
+            AddError(result);
+            await PopulateFormOptionsAsync(vm, includeOnlyActiveContracts: false);
+            return View(vm);
         }
 
         //............................................................................................//
@@ -234,13 +238,13 @@ namespace GLMS.Web.Controllers
         [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> Delete(int id)
         {
-            var request = await _serviceRequestService.GetDetailsAsync(id);
-            if (request == null)
+            var result = await _serviceRequestsApiClient.GetDetailsAsync(id);
+            if (!result.IsSuccess || result.Data == null)
             {
                 return NotFound();
             }
 
-            return View(request.ToDeleteViewModel());
+            return View(result.Data.ToDeleteViewModel());
         }
 
         //............................................................................................//
@@ -250,17 +254,15 @@ namespace GLMS.Web.Controllers
         [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            try
+            var result = await _serviceRequestsApiClient.DeleteAsync(id);
+            if (result.IsSuccess)
             {
-                await _serviceRequestService.DeleteAsync(id);
                 TempData["SuccessMessage"] = "Service request deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is KeyNotFoundException || ex is InvalidOperationException)
-            {
-                TempData["ErrorMessage"] = ex.Message;
-                return RedirectToAction(nameof(Index));
-            }
+
+            TempData["ErrorMessage"] = result.ErrorMessage;
+            return RedirectToAction(nameof(Index));
         }
 
         //............................................................................................//
@@ -274,15 +276,13 @@ namespace GLMS.Web.Controllers
                 return BadRequest(new { message = "Currency code is required." });
             }
 
-            try
+            var result = await _serviceRequestsApiClient.GetRateToZarAsync(currencyCode);
+            if (result.IsSuccess)
             {
-                var rate = await _currencyExchangeService.GetRateToZarAsync(currencyCode);
-                return Json(new { rate });
+                return Json(new { rate = result.Data });
             }
-            catch (Exception ex)
-            {
-            return BadRequest(new { message = ex.Message });
-            }
+
+            return BadRequest(new { message = result.ErrorMessage });
         }
 
         //............................................................................................//
@@ -292,14 +292,14 @@ namespace GLMS.Web.Controllers
         [Authorize(Roles = ApplicationRoles.AdminOrLogisticsManager)]
         public async Task<IActionResult> UpdateStatus(int id, int serviceRequestStatusId)
         {
-            try
+            var result = await _serviceRequestsApiClient.UpdateStatusAsync(id, serviceRequestStatusId);
+            if (result.IsSuccess)
             {
-                await _serviceRequestService.UpdateStatusAsync(id, serviceRequestStatusId);
                 TempData["SuccessMessage"] = "Service request status updated successfully.";
             }
-            catch (Exception ex) when (ex is InvalidOperationException || ex is KeyNotFoundException)
+            else
             {
-                TempData["ErrorMessage"] = ex.Message;
+                TempData["ErrorMessage"] = result.ErrorMessage;
             }
 
             return RedirectToAction(nameof(Details), new { id });
@@ -309,15 +309,15 @@ namespace GLMS.Web.Controllers
 
         private async Task PopulateFilterOptionsAsync(ServiceRequestFilterViewModel vm)
         {
-            var contracts = await _contractService.GetAllAsync();
-            var statuses = await _lookupService.GetServiceRequestStatusesAsync();
+            var contracts = await _contractsApiClient.GetAllAsync();
+            var statuses = await _lookupsApiClient.GetServiceRequestStatusesAsync();
 
-            vm.ContractOptions = contracts
+            vm.ContractOptions = (contracts.Data ?? [])
                 .OrderBy(c => c.Title)
                 .Select(c => new SelectListItem(c.Title, c.ContractId.ToString()))
                 .ToList();
 
-            vm.StatusOptions = statuses
+            vm.StatusOptions = (statuses.Data ?? [])
                 .OrderBy(s => s.Name)
                 .Select(s => new SelectListItem(s.Name, s.Id.ToString()))
                 .ToList();
@@ -327,8 +327,10 @@ namespace GLMS.Web.Controllers
 
         private async Task PopulateFormOptionsAsync(ServiceRequestFormViewModel vm, bool includeOnlyActiveContracts)
         {
-            var contracts = await _contractService.GetAllAsync();
-            var statuses = await _lookupService.GetServiceRequestStatusesAsync();
+            var contractsResult = await _contractsApiClient.GetAllAsync();
+            var statusesResult = await _lookupsApiClient.GetServiceRequestStatusesAsync();
+            var contracts = contractsResult.Data ?? [];
+            var statuses = statusesResult.Data ?? [];
 
             if (includeOnlyActiveContracts)
             {
@@ -347,18 +349,18 @@ namespace GLMS.Web.Controllers
                 .Select(s => new SelectListItem(s.Name, s.Id.ToString()))
                 .ToList();
 
-            try
+            var currenciesResult = await _serviceRequestsApiClient.GetSupportedCurrenciesAsync();
+            if (currenciesResult.IsSuccess)
             {
-                var currencies = await _currencyExchangeService.GetSupportedCurrenciesAsync();
-                vm.CurrencyOptions = currencies
+                vm.CurrencyOptions = currenciesResult.Data!
                     .OrderBy(c => c.Key)
                     .Select(c => new SelectListItem($"{c.Key} - {c.Value}", c.Key))
                     .ToList();
             }
-            catch (Exception ex)
+            else
             {
                 vm.CurrencyOptions = new List<SelectListItem>();
-                ModelState.AddModelError(string.Empty, $"Unable to load currency list: {ex.Message}");
+                ModelState.AddModelError(string.Empty, $"Unable to load currency list: {currenciesResult.ErrorMessage}");
             }
 
             if (vm.ServiceRequestStatusId == 0)
@@ -374,6 +376,13 @@ namespace GLMS.Web.Controllers
             {
                 vm.OriginalCurrencyCode = "USD";
             }
+        }
+
+        //............................................................................................//
+
+        private void AddError(ApiClientResult result)
+        {
+            ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "The request could not be completed.");
         }
 
     }

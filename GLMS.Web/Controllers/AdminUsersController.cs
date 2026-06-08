@@ -1,5 +1,6 @@
+using GLMS.Web.ApiClients;
+using GLMS.Web.ApiModels;
 using GLMS.Web.Security;
-using GLMS.Web.Services;
 using GLMS.Web.ViewModels.Account;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,11 +17,11 @@ namespace GLMS.Web.Controllers
     [Route("Admin/Users")]
     public class AdminUsersController : Controller
     {
-        private readonly IAccountService _accountService;
+        private readonly IAuthApiClient _authApiClient;
 
-        public AdminUsersController(IAccountService accountService)
+        public AdminUsersController(IAuthApiClient authApiClient)
         {
-            _accountService = accountService;
+            _authApiClient = authApiClient;
         }
 
         //........................................................................................//
@@ -28,8 +29,16 @@ namespace GLMS.Web.Controllers
         [HttpGet("")]
         public async Task<IActionResult> Index()
         {
-            var users = await _accountService.GetUsersAsync();
-            return View(users);
+            var result = await _authApiClient.GetUsersAsync();
+            if (!result.IsSuccess)
+            {
+                ViewData["ErrorMessage"] = result.ErrorMessage;
+                return View(new List<AdminUserListItemViewModel>());
+            }
+
+            return View(result.Data!
+                .Select(ToListViewModel)
+                .ToList());
         }
 
         //........................................................................................//
@@ -54,14 +63,24 @@ namespace GLMS.Web.Controllers
                 return View(vm);
             }
 
-            var result = await _accountService.CreateUserAsync(vm);
-            if (result.Succeeded)
+            var result = await _authApiClient.CreateUserAsync(new CreateUserDto
+            {
+                FirstName = vm.FirstName,
+                LastName = vm.LastName,
+                Email = vm.Email,
+                Role = vm.Role,
+                TemporaryPassword = vm.TemporaryPassword,
+                ConfirmTemporaryPassword = vm.ConfirmTemporaryPassword,
+                IsActive = vm.IsActive
+            });
+
+            if (result.IsSuccess)
             {
                 TempData["SuccessMessage"] = "User created successfully.";
                 return RedirectToAction(nameof(Index));
             }
 
-            AddErrors(result);
+            AddError(result);
             PopulateRoleOptions(vm);
             return View(vm);
         }
@@ -71,12 +90,13 @@ namespace GLMS.Web.Controllers
         [HttpGet("Edit/{id}")]
         public async Task<IActionResult> Edit(string id)
         {
-            var vm = await _accountService.GetUserForEditAsync(id);
-            if (vm == null)
+            var result = await _authApiClient.GetUserAsync(id);
+            if (!result.IsSuccess || result.Data == null)
             {
                 return NotFound();
             }
 
+            var vm = ToEditViewModel(result.Data);
             PopulateRoleOptions(vm);
             return View(vm);
         }
@@ -98,14 +118,23 @@ namespace GLMS.Web.Controllers
                 return View(vm);
             }
 
-            var result = await _accountService.UpdateUserAsync(vm);
-            if (result.Succeeded)
+            var result = await _authApiClient.UpdateUserAsync(new UpdateUserDto
+            {
+                UserId = vm.UserId,
+                FirstName = vm.FirstName,
+                LastName = vm.LastName,
+                Email = vm.Email,
+                Role = vm.Role,
+                IsActive = vm.IsActive
+            });
+
+            if (result.IsSuccess)
             {
                 TempData["SuccessMessage"] = "User updated successfully.";
                 return RedirectToAction(nameof(Index));
             }
 
-            AddErrors(result);
+            AddError(result);
             PopulateRoleOptions(vm);
             return View(vm);
         }
@@ -127,14 +156,20 @@ namespace GLMS.Web.Controllers
                 return RedirectToAction(nameof(Edit), new { id });
             }
 
-            var result = await _accountService.ResetPasswordAsync(vm);
-            if (result.Succeeded)
+            var result = await _authApiClient.ResetPasswordAsync(new ResetUserPasswordDto
+            {
+                UserId = vm.UserId,
+                TemporaryPassword = vm.TemporaryPassword,
+                ConfirmTemporaryPassword = vm.ConfirmTemporaryPassword
+            });
+
+            if (result.IsSuccess)
             {
                 TempData["SuccessMessage"] = "Temporary password set successfully.";
                 return RedirectToAction(nameof(Edit), new { id });
             }
 
-            TempData["ErrorMessage"] = string.Join(" ", result.Errors);
+            TempData["ErrorMessage"] = result.ErrorMessage;
             return RedirectToAction(nameof(Edit), new { id });
         }
 
@@ -160,14 +195,14 @@ namespace GLMS.Web.Controllers
 
         private async Task<IActionResult> SetActiveAsync(string id, bool isActive)
         {
-            var result = await _accountService.SetUserActiveAsync(id, isActive);
-            if (result.Succeeded)
+            var result = await _authApiClient.SetUserActiveAsync(id, isActive);
+            if (result.IsSuccess)
             {
                 TempData["SuccessMessage"] = isActive ? "User activated successfully." : "User deactivated successfully.";
             }
             else
             {
-                TempData["ErrorMessage"] = string.Join(" ", result.Errors);
+                TempData["ErrorMessage"] = result.ErrorMessage;
             }
 
             return RedirectToAction(nameof(Index));
@@ -198,12 +233,40 @@ namespace GLMS.Web.Controllers
 
         //........................................................................................//
 
-        private void AddErrors(AccountResult result)
+        private static AdminUserListItemViewModel ToListViewModel(UserListDto user)
         {
-            foreach (var error in result.Errors)
+            return new AdminUserListItemViewModel
             {
-                ModelState.AddModelError(string.Empty, error);
-            }
+                UserId = user.UserId,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                Role = user.Role,
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt
+            };
+        }
+
+        //........................................................................................//
+
+        private static AdminUserEditViewModel ToEditViewModel(UserDetailDto user)
+        {
+            return new AdminUserEditViewModel
+            {
+                UserId = user.UserId,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                Role = user.Role,
+                IsActive = user.IsActive
+            };
+        }
+
+        //........................................................................................//
+
+        private void AddError(ApiClientResult result)
+        {
+            ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "The request could not be completed.");
         }
 
         //........................................................................................//

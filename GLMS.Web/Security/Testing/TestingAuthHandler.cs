@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
-namespace GLMS.Web.Services.Testing
+namespace GLMS.Web.Security.Testing
 {
     public class TestingAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {

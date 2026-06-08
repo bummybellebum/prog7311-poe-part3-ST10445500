@@ -1,5 +1,6 @@
-using GLMS.Web.Services;
-using GLMS.Web.Services.Testing;
+using GLMS.Web.ApiClients;
+using GLMS.Web.ApiClients.Testing;
+using GLMS.Web.Security.Testing;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -56,23 +57,19 @@ namespace GLMS.Web
 
             if (isTesting)
             {
-                builder.Services.AddScoped<IAccountService, TestingAccountService>();
-                builder.Services.AddScoped<IClientService, TestingClientService>();
-                builder.Services.AddScoped<IContractService, TestingContractService>();
-                builder.Services.AddScoped<IContractDocumentService, TestingContractDocumentService>();
-                builder.Services.AddScoped<IServiceRequestService, TestingServiceRequestService>();
-                builder.Services.AddScoped<ILookupService, TestingLookupService>();
-                builder.Services.AddScoped<ICurrencyExchangeService, TestingCurrencyExchangeService>();
+                builder.Services.AddScoped<IAuthApiClient, TestingAuthApiClient>();
+                builder.Services.AddScoped<IClientsApiClient, TestingClientsApiClient>();
+                builder.Services.AddScoped<IContractsApiClient, TestingContractsApiClient>();
+                builder.Services.AddScoped<IServiceRequestsApiClient, TestingServiceRequestsApiClient>();
+                builder.Services.AddScoped<ILookupsApiClient, TestingLookupsApiClient>();
             }
             else
             {
-                RegisterApiClient<IAccountService, AccountService>(builder);
-                RegisterApiClient<IClientService, ClientService>(builder);
-                RegisterApiClient<IContractService, ContractService>(builder);
-                RegisterApiClient<IContractDocumentService, ContractDocumentService>(builder);
-                RegisterApiClient<IServiceRequestService, ServiceRequestService>(builder);
-                RegisterApiClient<ILookupService, LookupService>(builder);
-                RegisterApiClient<ICurrencyExchangeService, CurrencyExchangeService>(builder);
+                RegisterApiClient<IAuthApiClient, AuthApiClient>(builder);
+                RegisterApiClient<IClientsApiClient, ClientsApiClient>(builder);
+                RegisterApiClient<IContractsApiClient, ContractsApiClient>(builder);
+                RegisterApiClient<IServiceRequestsApiClient, ServiceRequestsApiClient>(builder);
+                RegisterApiClient<ILookupsApiClient, LookupsApiClient>(builder);
             }
 
             //add services to the container.
@@ -116,7 +113,12 @@ namespace GLMS.Web
             builder.Services.AddHttpClient<TInterface, TImplementation>((sp, client) =>
             {
                 var configuration = sp.GetRequiredService<IConfiguration>();
-                var baseUrl = configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7174/";
+                var baseUrl = configuration["ApiSettings:BaseUrl"];
+                if (string.IsNullOrWhiteSpace(baseUrl))
+                {
+                    throw new InvalidOperationException("ApiSettings:BaseUrl must be configured for GLMS.Web API clients.");
+                }
+
                 client.BaseAddress = new Uri(baseUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
             });

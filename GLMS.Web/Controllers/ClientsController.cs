@@ -1,5 +1,5 @@
 using GLMS.Web.Security;
-using GLMS.Web.Services;
+using GLMS.Web.ApiClients;
 using GLMS.Web.ApiModels;
 using GLMS.Web.Mappings;
 using GLMS.Web.ViewModels.Clients;
@@ -15,46 +15,43 @@ namespace GLMS.Web.Controllers
     [Authorize(Roles = ApplicationRoles.AllRoles)]
     public class ClientsController : Controller
     {
-        private readonly IClientService _clientService;
+        private readonly IClientsApiClient _clientsApiClient;
 
-        public ClientsController(IClientService clientService)
+        public ClientsController(IClientsApiClient clientsApiClient)
         {
-            _clientService = clientService;
+            _clientsApiClient = clientsApiClient;
         }
 
         //........................................................................................//
 
         public async Task<IActionResult> Index(string? search)
         {
-            try
-            {
-                var clients = await _clientService.GetAllAsync(search);
-
-                ViewData["Search"] = search;
-                return View(clients
-                    .OrderBy(c => c.CompanyName)
-                    .Select(c => c.ToListViewModel())
-                    .ToList());
-            }
-            catch (ApiUnavailableException ex)
+            var result = await _clientsApiClient.GetAllAsync(search);
+            if (!result.IsSuccess)
             {
                 ViewData["Search"] = search;
-                ViewData["ErrorMessage"] = ex.Message;
+                ViewData["ErrorMessage"] = result.ErrorMessage;
                 return View(new List<ClientListItemViewModel>());
             }
+
+            ViewData["Search"] = search;
+            return View(result.Data!
+                .OrderBy(c => c.CompanyName)
+                .Select(c => c.ToListViewModel())
+                .ToList());
         }
 
         //........................................................................................//
 
         public async Task<IActionResult> Details(int id)
         {
-            var client = await _clientService.GetWithContractsAsync(id);
-            if (client == null)
+            var result = await _clientsApiClient.GetWithContractsAsync(id);
+            if (!result.IsSuccess || result.Data == null)
             {
                 return NotFound();
             }
 
-            return View(client.ToDetailsViewModel());
+            return View(result.Data.ToDetailsViewModel());
         }
 
         //........................................................................................//
@@ -77,27 +74,25 @@ namespace GLMS.Web.Controllers
                 return View(vm);
             }
 
-            try
+            var client = new CreateClientDto
             {
-                var client = new CreateClientDto
-                {
-                    CompanyName = vm.CompanyName,
-                    Email = vm.Email,
-                    Phone = vm.Phone,
-                    Region = vm.Region,
-                    Country = vm.Country,
-                    IsActive = vm.IsActive
-                };
+                CompanyName = vm.CompanyName,
+                Email = vm.Email,
+                Phone = vm.Phone,
+                Region = vm.Region,
+                Country = vm.Country,
+                IsActive = vm.IsActive
+            };
 
-                await _clientService.CreateAsync(client);
+            var result = await _clientsApiClient.CreateAsync(client);
+            if (result.IsSuccess)
+            {
                 TempData["SuccessMessage"] = "Client created successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                return View(vm);
-            }
+
+            AddError(result);
+            return View(vm);
         }
 
         //........................................................................................//
@@ -105,12 +100,13 @@ namespace GLMS.Web.Controllers
         [Authorize(Roles = ApplicationRoles.AdminOrContractManager)]
         public async Task<IActionResult> Edit(int id)
         {
-            var client = await _clientService.GetByIdAsync(id);
-            if (client == null)
+            var result = await _clientsApiClient.GetByIdAsync(id);
+            if (!result.IsSuccess || result.Data == null)
             {
                 return NotFound();
             }
 
+            var client = result.Data;
             var vm = new ClientFormViewModel
             {
                 ClientId = client.ClientId,
@@ -142,28 +138,26 @@ namespace GLMS.Web.Controllers
                 return View(vm);
             }
 
-            try
+            var existing = new UpdateClientDto
             {
-                var existing = new UpdateClientDto
-                {
-                    ClientId = id,
-                    CompanyName = vm.CompanyName,
-                    Email = vm.Email,
-                    Phone = vm.Phone,
-                    Region = vm.Region,
-                    Country = vm.Country,
-                    IsActive = vm.IsActive
-                };
+                ClientId = id,
+                CompanyName = vm.CompanyName,
+                Email = vm.Email,
+                Phone = vm.Phone,
+                Region = vm.Region,
+                Country = vm.Country,
+                IsActive = vm.IsActive
+            };
 
-                await _clientService.UpdateAsync(existing);
+            var result = await _clientsApiClient.UpdateAsync(existing);
+            if (result.IsSuccess)
+            {
                 TempData["SuccessMessage"] = "Client updated successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException || ex is KeyNotFoundException)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                return View(vm);
-            }
+
+            AddError(result);
+            return View(vm);
         }
 
         //........................................................................................//
@@ -171,13 +165,13 @@ namespace GLMS.Web.Controllers
         [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> Delete(int id)
         {
-            var client = await _clientService.GetByIdAsync(id);
-            if (client == null)
+            var result = await _clientsApiClient.GetByIdAsync(id);
+            if (!result.IsSuccess || result.Data == null)
             {
                 return NotFound();
             }
 
-            return View(client.ToDeleteViewModel());
+            return View(result.Data.ToDeleteViewModel());
         }
 
         //........................................................................................//
@@ -187,17 +181,22 @@ namespace GLMS.Web.Controllers
         [Authorize(Roles = ApplicationRoles.Admin)]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            try
+            var result = await _clientsApiClient.DeleteAsync(id);
+            if (result.IsSuccess)
             {
-                await _clientService.DeleteAsync(id);
                 TempData["SuccessMessage"] = "Client deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is KeyNotFoundException || ex is InvalidOperationException)
-            {
-                TempData["ErrorMessage"] = ex.Message;
-                return RedirectToAction(nameof(Index));
-            }
+
+            TempData["ErrorMessage"] = result.ErrorMessage;
+            return RedirectToAction(nameof(Index));
+        }
+
+        //........................................................................................//
+
+        private void AddError(ApiClientResult result)
+        {
+            ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "The request could not be completed.");
         }
 
     }

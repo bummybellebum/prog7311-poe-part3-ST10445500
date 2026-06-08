@@ -1,6 +1,6 @@
+using GLMS.Web.ApiClients;
 using GLMS.Web.Models;
 using GLMS.Web.Security;
-using GLMS.Web.Services;
 using GLMS.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,62 +15,64 @@ namespace GLMS.Web.Controllers
     [Authorize]
     public class HomeController : Controller
     {
-        private readonly IClientService _clientService;
-        private readonly IContractService _contractService;
-        private readonly IServiceRequestService _serviceRequestService;
+        private readonly IClientsApiClient _clientsApiClient;
+        private readonly IContractsApiClient _contractsApiClient;
+        private readonly IServiceRequestsApiClient _serviceRequestsApiClient;
 
         public HomeController(
-            IClientService clientService,
-            IContractService contractService,
-            IServiceRequestService serviceRequestService)
+            IClientsApiClient clientsApiClient,
+            IContractsApiClient contractsApiClient,
+            IServiceRequestsApiClient serviceRequestsApiClient)
         {
-            _clientService = clientService;
-            _contractService = contractService;
-            _serviceRequestService = serviceRequestService;
+            _clientsApiClient = clientsApiClient;
+            _contractsApiClient = contractsApiClient;
+            _serviceRequestsApiClient = serviceRequestsApiClient;
         }
 
         //............................................................................................//
 
         public async Task<IActionResult> Index()
         {
-            try
-            {
-                var clients = await _clientService.GetAllAsync();
-                var contracts = await _contractService.GetAllAsync();
-                var serviceRequests = await _serviceRequestService.GetAllAsync();
+            var clientsResult = await _clientsApiClient.GetAllAsync();
+            var contractsResult = await _contractsApiClient.GetAllAsync();
+            var serviceRequestsResult = await _serviceRequestsApiClient.GetAllAsync();
 
-                var vm = new DashboardViewModel
-                {
-                    TotalClients = clients.Count,
-                    TotalContracts = contracts.Count,
-                    ActiveContracts = contracts.Count(c => string.Equals(c.ContractStatusName, "Active", StringComparison.OrdinalIgnoreCase)),
-                    ExpiredOrOnHoldContracts = contracts.Count(c =>
-                        string.Equals(c.ContractStatusName, "Expired", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(c.ContractStatusName, "On Hold", StringComparison.OrdinalIgnoreCase)),
-                    TotalServiceRequests = serviceRequests.Count,
-                    PendingServiceRequests = serviceRequests.Count(sr => string.Equals(sr.ServiceRequestStatusName, "Pending", StringComparison.OrdinalIgnoreCase)),
-                    CompletedServiceRequests = serviceRequests.Count(sr => string.Equals(sr.ServiceRequestStatusName, "Completed", StringComparison.OrdinalIgnoreCase)),
-                    RecentServiceRequests = serviceRequests
-                        .OrderByDescending(sr => sr.RequestedAt)
-                        .Take(5)
-                        .Select(sr => new RecentServiceRequestItemViewModel
-                        {
-                            ServiceRequestId = sr.ServiceRequestId,
-                            ContractId = sr.ContractId,
-                            ContractTitle = sr.ContractTitle,
-                            StatusName = sr.ServiceRequestStatusName,
-                            RequestedAt = sr.RequestedAt
-                        })
-                        .ToList()
-                };
-
-                return View(vm);
-            }
-            catch (ApiUnavailableException ex)
+            if (!clientsResult.IsSuccess || !contractsResult.IsSuccess || !serviceRequestsResult.IsSuccess)
             {
-                ViewData["ErrorMessage"] = ex.Message;
+                ViewData["ErrorMessage"] = clientsResult.ErrorMessage ?? contractsResult.ErrorMessage ?? serviceRequestsResult.ErrorMessage;
                 return View(new DashboardViewModel());
             }
+
+            var clients = clientsResult.Data!;
+            var contracts = contractsResult.Data!;
+            var serviceRequests = serviceRequestsResult.Data!;
+
+            var vm = new DashboardViewModel
+            {
+                TotalClients = clients.Count,
+                TotalContracts = contracts.Count,
+                ActiveContracts = contracts.Count(c => string.Equals(c.ContractStatusName, "Active", StringComparison.OrdinalIgnoreCase)),
+                ExpiredOrOnHoldContracts = contracts.Count(c =>
+                    string.Equals(c.ContractStatusName, "Expired", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(c.ContractStatusName, "On Hold", StringComparison.OrdinalIgnoreCase)),
+                TotalServiceRequests = serviceRequests.Count,
+                PendingServiceRequests = serviceRequests.Count(sr => string.Equals(sr.ServiceRequestStatusName, "Pending", StringComparison.OrdinalIgnoreCase)),
+                CompletedServiceRequests = serviceRequests.Count(sr => string.Equals(sr.ServiceRequestStatusName, "Completed", StringComparison.OrdinalIgnoreCase)),
+                RecentServiceRequests = serviceRequests
+                    .OrderByDescending(sr => sr.RequestedAt)
+                    .Take(5)
+                    .Select(sr => new RecentServiceRequestItemViewModel
+                    {
+                        ServiceRequestId = sr.ServiceRequestId,
+                        ContractId = sr.ContractId,
+                        ContractTitle = sr.ContractTitle,
+                        StatusName = sr.ServiceRequestStatusName,
+                        RequestedAt = sr.RequestedAt
+                    })
+                    .ToList()
+            };
+
+            return View(vm);
         }
 
         //............................................................................................//
