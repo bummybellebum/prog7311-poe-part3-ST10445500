@@ -1,8 +1,8 @@
 using GLMS.Web.Security;
 using GLMS.Web.Services;
 using GLMS.Web.ApiModels;
+using GLMS.Web.Mappings;
 using GLMS.Web.ViewModels.Clients;
-using GLMS.Web.ViewModels.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,7 +33,7 @@ namespace GLMS.Web.Controllers
                 ViewData["Search"] = search;
                 return View(clients
                     .OrderBy(c => c.CompanyName)
-                    .Select(ToClientListItemViewModel)
+                    .Select(c => c.ToListViewModel())
                     .ToList());
             }
             catch (ApiUnavailableException ex)
@@ -54,7 +54,7 @@ namespace GLMS.Web.Controllers
                 return NotFound();
             }
 
-            return View(ToClientDetailsViewModel(client));
+            return View(client.ToDetailsViewModel());
         }
 
         //........................................................................................//
@@ -177,7 +177,7 @@ namespace GLMS.Web.Controllers
                 return NotFound();
             }
 
-            return View(ToClientDeleteViewModel(client));
+            return View(client.ToDeleteViewModel());
         }
 
         //........................................................................................//
@@ -198,66 +198,6 @@ namespace GLMS.Web.Controllers
                 TempData["ErrorMessage"] = ex.Message;
                 return RedirectToAction(nameof(Index));
             }
-        }
-
-        //........................................................................................//
-
-        private static ClientListItemViewModel ToClientListItemViewModel(ClientListDto client)
-        {
-            return new ClientListItemViewModel
-            {
-                ClientId = client.ClientId,
-                CompanyName = client.CompanyName,
-                Email = client.Email,
-                Region = client.Region,
-                Country = client.Country,
-                IsActive = client.IsActive
-            };
-        }
-
-        private static ClientDetailsViewModel ToClientDetailsViewModel(ClientDetailDto client)
-        {
-            return new ClientDetailsViewModel
-            {
-                ClientId = client.ClientId,
-                CompanyName = client.CompanyName,
-                Email = client.Email,
-                Phone = client.Phone,
-                Region = client.Region,
-                Country = client.Country,
-                IsActive = client.IsActive,
-                ContractCount = client.Contracts.Count,
-                ActiveContractCount = client.Contracts.Count(c => string.Equals(c.ContractStatusName, "Active", StringComparison.OrdinalIgnoreCase)),
-                Contracts = client.Contracts
-                    .OrderByDescending(c => c.CreatedAt)
-                    .Select(ToContractListItemViewModel)
-                    .ToList()
-            };
-        }
-
-        private static ContractListItemViewModel ToContractListItemViewModel(ContractListDto contract)
-        {
-            return new ContractListItemViewModel
-            {
-                ContractId = contract.ContractId,
-                Title = contract.Title,
-                ClientName = contract.ClientName,
-                ContractStatusName = contract.ContractStatusName,
-                StartDate = contract.StartDate,
-                EndDate = contract.EndDate,
-                CreatedAt = contract.CreatedAt
-            };
-        }
-
-        private static ClientDeleteViewModel ToClientDeleteViewModel(ClientDetailDto client)
-        {
-            return new ClientDeleteViewModel
-            {
-                ClientId = client.ClientId,
-                CompanyName = client.CompanyName,
-                Email = client.Email,
-                IsActive = client.IsActive
-            };
         }
 
     }

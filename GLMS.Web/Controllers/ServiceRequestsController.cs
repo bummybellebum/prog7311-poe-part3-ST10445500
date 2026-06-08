@@ -1,6 +1,7 @@
 using GLMS.Web.Security;
 using GLMS.Web.Services;
 using GLMS.Web.ApiModels;
+using GLMS.Web.Mappings;
 using GLMS.Web.ViewModels.ServiceRequests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -41,7 +42,7 @@ namespace GLMS.Web.Controllers
 
             filter.Requests = requests
                 .OrderByDescending(r => r.RequestedAt)
-                .Select(ToServiceRequestListItemViewModel)
+                .Select(r => r.ToListViewModel())
                 .ToList();
             await PopulateFilterOptionsAsync(filter);
 
@@ -59,7 +60,7 @@ namespace GLMS.Web.Controllers
             }
 
             var statuses = await _lookupService.GetServiceRequestStatusesAsync();
-            var vm = ToServiceRequestDetailsViewModel(request);
+            var vm = request.ToDetailsViewModel();
             vm.StatusOptions = statuses
                 .OrderBy(s => s.Name)
                 .Select(s => new SelectListItem(s.Name, s.Id.ToString(), s.Id == request.ServiceRequestStatusId))
@@ -239,7 +240,7 @@ namespace GLMS.Web.Controllers
                 return NotFound();
             }
 
-            return View(ToServiceRequestDeleteViewModel(request));
+            return View(request.ToDeleteViewModel());
         }
 
         //............................................................................................//
@@ -375,52 +376,6 @@ namespace GLMS.Web.Controllers
             }
         }
 
-        //............................................................................................//
-
-        private static ServiceRequestListItemViewModel ToServiceRequestListItemViewModel(ServiceRequestListDto request)
-        {
-            return new ServiceRequestListItemViewModel
-            {
-                ServiceRequestId = request.ServiceRequestId,
-                ContractId = request.ContractId,
-                ContractTitle = request.ContractTitle,
-                ServiceRequestStatusName = request.ServiceRequestStatusName,
-                AmountOriginal = request.AmountOriginal,
-                OriginalCurrencyCode = request.OriginalCurrencyCode,
-                AmountZAR = request.AmountZAR,
-                RequestedAt = request.RequestedAt
-            };
-        }
-
-        private static ServiceRequestDetailsViewModel ToServiceRequestDetailsViewModel(ServiceRequestDetailDto request)
-        {
-            return new ServiceRequestDetailsViewModel
-            {
-                ServiceRequestId = request.ServiceRequestId,
-                ContractId = request.ContractId,
-                ContractTitle = request.ContractTitle,
-                ServiceRequestStatusName = request.ServiceRequestStatusName,
-                AmountOriginal = request.AmountOriginal,
-                OriginalCurrencyCode = request.OriginalCurrencyCode,
-                AmountZAR = request.AmountZAR,
-                RequestedAt = request.RequestedAt,
-                ExchangeRateToZAR = request.ExchangeRateToZAR,
-                RequestedByUserId = request.RequestedByUserId,
-                RequestedByEmail = request.RequestedByEmail,
-                Description = request.Description
-            };
-        }
-
-        private static ServiceRequestDeleteViewModel ToServiceRequestDeleteViewModel(ServiceRequestDetailDto request)
-        {
-            return new ServiceRequestDeleteViewModel
-            {
-                ServiceRequestId = request.ServiceRequestId,
-                ContractTitle = request.ContractTitle,
-                ServiceRequestStatusName = request.ServiceRequestStatusName,
-                AmountZAR = request.AmountZAR
-            };
-        }
     }
 }
 
