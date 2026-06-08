@@ -3,7 +3,7 @@
 
 //..........................................o0oSTART OF FILEo0o..................................................//
 
-namespace GLMS.Web.ViewModels.Api
+namespace GLMS.Web.ApiModels
 {
     public class ServiceRequestListDto
     {

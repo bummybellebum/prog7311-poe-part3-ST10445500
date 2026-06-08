@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using GLMS.Web.Models;
+using GLMS.Web.Security;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 //ST10445500 - PROG7311 - GLMS POE

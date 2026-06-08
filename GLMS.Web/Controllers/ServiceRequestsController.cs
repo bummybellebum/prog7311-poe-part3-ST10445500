@@ -1,6 +1,6 @@
-using GLMS.Web.Models;
+using GLMS.Web.Security;
 using GLMS.Web.Services;
-using GLMS.Web.ViewModels.Api;
+using GLMS.Web.ApiModels;
 using GLMS.Web.ViewModels.ServiceRequests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

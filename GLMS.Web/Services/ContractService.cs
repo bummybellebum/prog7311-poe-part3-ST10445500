@@ -1,4 +1,4 @@
-using GLMS.Web.ViewModels.Api;
+using GLMS.Web.ApiModels;
 
 //ST10445500 - PROG7311 - GLMS POE
 //ContractService

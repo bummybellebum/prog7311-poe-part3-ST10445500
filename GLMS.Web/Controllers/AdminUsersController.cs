@@ -1,4 +1,4 @@
-using GLMS.Web.Models;
+using GLMS.Web.Security;
 using GLMS.Web.Services;
 using GLMS.Web.ViewModels.Account;
 using Microsoft.AspNetCore.Authorization;
