@@ -390,38 +390,65 @@ If only the admin account is currently seeded, the ContractManager and Logistics
 
 ## Testing
 
-GLMS includes automated tests for important business rules and system behaviour.
+GLMS includes a small automated test suite focused on the POE requirements. The tests are in one xUnit project, `GLMS.Tests`, with unit tests for business rules and integration tests for API endpoints.
 
-### Unit Tests
+### Running Tests
 
-Unit tests cover selected service and validation logic, such as:
+From the repository root, run all tests with:
+
+```powershell
+dotnet test GLMS-POE.slnx
+```
+
+To build before testing:
+
+```powershell
+dotnet build GLMS-POE.slnx
+```
+
+To run only unit tests:
+
+```powershell
+dotnet test GLMS.Tests/GLMS.Tests.csproj --filter "FullyQualifiedName~UnitTests"
+```
+
+To run only API integration tests:
+
+```powershell
+dotnet test GLMS.Tests/GLMS.Tests.csproj --filter "FullyQualifiedName~IntegrationTests"
+```
+
+### Unit Test Coverage
+
+Unit tests cover selected service, repository, and validation logic, including:
 
 - currency calculation
 - PDF file validation
 - service request validation
 - blocked requests for Expired contracts
 - blocked requests for On Hold contracts
-- repository/service behaviour where appropriate
+- contract search/filter behaviour
+- repository behaviour where appropriate
 
-### Integration Tests
+The currency tests use fake HTTP responses. They do not call the live Frankfurter exchange API.
 
-Integration tests are used for the Web API.
+### API Integration Test Coverage
 
-Example integration test coverage:
+Integration tests call the ASP.NET Core Web API through `WebApplicationFactory`. They use EF Core InMemory, deterministic seed data, test authentication, and a fake currency service. Docker, SQL Server, and the running API container are not required for these tests.
 
 - `GET /api/contracts` returns a successful response
+- `GET /api/contracts` with filters returns filtered JSON
 - creating a contract returns the correct status code
+- creating then reading a contract returns the created data
 - patching a contract status updates the contract
 - creating a service request works for an Active contract
 - creating a service request fails for an Expired or On Hold contract
-- unauthenticated requests are rejected where authorization is required
-- users without the required role receive the correct response
+
+Before submission, capture screenshots of the passing `dotnet build` and `dotnet test` output for the POE evidence.
 
 ### GitHub Actions
 
-The project supports CI through GitHub Actions.
-
-The pipeline can be used to:
+The project supports CI through GitHub Actions. The pipeline can be used to:
 
 - restore dependencies
 - build the solution

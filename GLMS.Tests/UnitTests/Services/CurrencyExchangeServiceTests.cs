@@ -20,6 +20,19 @@ namespace GLMS.Tests.UnitTests.Services
         }
 
         [Fact]
+        public async Task ConvertToZarAsync_WithDecimalResult_RoundsAwayFromZeroToTwoDecimals()
+        {
+            // Arrange
+            var service = CreateService();
+
+            // Act
+            var result = await service.ConvertToZarAsync(1m, "EUR");
+
+            // Assert
+            Assert.Equal(18.56m, result);
+        }
+
+        [Fact]
         public async Task GetRateToZarAsync_WithZar_ReturnsOne()
         {
             // Arrange
@@ -95,8 +108,9 @@ namespace GLMS.Tests.UnitTests.Services
                 var path = request.RequestUri?.AbsolutePath;
                 var json = path switch
                 {
-                    "/v2/currencies" => """[{"iso_code":"USD","name":"US Dollar"},{"iso_code":"ZAR","name":"South African Rand"}]""",
+                    "/v2/currencies" => """[{"iso_code":"USD","name":"US Dollar"},{"iso_code":"EUR","name":"Euro"},{"iso_code":"ZAR","name":"South African Rand"}]""",
                     "/v2/rate/USD/ZAR" => """{"rate":18.5}""",
+                    "/v2/rate/EUR/ZAR" => """{"rate":18.555}""",
                     _ => throw new InvalidOperationException($"Unexpected exchange URL: {path}")
                 };
 

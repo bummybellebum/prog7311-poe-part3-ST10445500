@@ -59,9 +59,19 @@ namespace GLMS.Tests.Helpers
                 TestData.ContractStatus(ContractStatusConstants.OnHoldId, ContractStatusConstants.OnHoldName),
                 TestData.ContractStatus(ContractStatusConstants.ExpiredId, ContractStatusConstants.ExpiredName));
             context.ServiceRequestStatuses.Add(TestData.ServiceRequestStatus());
-            var contract = TestData.Contract();
-            contract.ContractStatus = context.ContractStatuses.Local.First(s => s.ContractStatusId == ContractStatusConstants.ActiveId);
-            context.Contracts.Add(contract);
+            var activeContract = TestData.Contract(1, statusId: ContractStatusConstants.ActiveId, statusName: ContractStatusConstants.ActiveName, startDate: new DateTime(2026, 1, 10));
+            var expiredContract = TestData.Contract(2, statusId: ContractStatusConstants.ExpiredId, statusName: ContractStatusConstants.ExpiredName, startDate: new DateTime(2025, 1, 10));
+            var onHoldContract = TestData.Contract(3, statusId: ContractStatusConstants.OnHoldId, statusName: ContractStatusConstants.OnHoldName, startDate: new DateTime(2026, 2, 10));
+
+            activeContract.Title = "Active Integration Contract";
+            expiredContract.Title = "Expired Integration Contract";
+            onHoldContract.Title = "On Hold Integration Contract";
+
+            activeContract.ContractStatus = context.ContractStatuses.Local.First(s => s.ContractStatusId == ContractStatusConstants.ActiveId);
+            expiredContract.ContractStatus = context.ContractStatuses.Local.First(s => s.ContractStatusId == ContractStatusConstants.ExpiredId);
+            onHoldContract.ContractStatus = context.ContractStatuses.Local.First(s => s.ContractStatusId == ContractStatusConstants.OnHoldId);
+
+            context.Contracts.AddRange(activeContract, expiredContract, onHoldContract);
 
             await context.SaveChangesAsync();
             context.ChangeTracker.Clear();
