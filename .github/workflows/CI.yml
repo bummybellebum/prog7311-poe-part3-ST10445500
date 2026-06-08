@@ -2,32 +2,48 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [main]
   pull_request:
-    branches: [ master ]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: 10.0.x
+  SOLUTION_FILE: GLMS-POE.slnx
+  BUILD_CONFIGURATION: Release
 
 jobs:
-  build-and-test:
+  validate:
+    name: Build, test, and container checks
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '10.0.x'
-          cache: true
-          cache-dependency-path: |
-            **/packages.lock.json
-            **/*.csproj
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore "${{ env.SOLUTION_FILE }}"
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build "${{ env.SOLUTION_FILE }}" --no-restore --configuration "${{ env.BUILD_CONFIGURATION }}"
 
       - name: Test
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        run: dotnet test "${{ env.SOLUTION_FILE }}" --no-build --configuration "${{ env.BUILD_CONFIGURATION }}" --verbosity normal
+
+      - name: Build API Docker image
+        run: docker build -f GLMS.Api/Dockerfile . --build-arg BUILD_CONFIGURATION="${{ env.BUILD_CONFIGURATION }}" --tag glms-api:ci
+
+      - name: Build Web Docker image
+        run: docker build -f GLMS.Web/Dockerfile . --build-arg BUILD_CONFIGURATION="${{ env.BUILD_CONFIGURATION }}" --tag glms-web:ci
