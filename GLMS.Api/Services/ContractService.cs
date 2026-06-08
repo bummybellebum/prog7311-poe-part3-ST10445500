@@ -3,7 +3,12 @@ using GLMS.Api.DTOs.Contracts;
 using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ContractService
 
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The service keeps business rules and validation away from the controller.
 
 namespace GLMS.Api.Services
 {
@@ -146,6 +151,7 @@ namespace GLMS.Api.Services
         {
             ValidateContract(contract);
 
+            // The service checks that the linked client exists before the contract is saved.
             var client = await _clientRepository.GetByIdAsync(contract.ClientId);
             if (client == null)
                 throw new KeyNotFoundException($"Client with ID {contract.ClientId} not found.");
@@ -194,6 +200,7 @@ namespace GLMS.Api.Services
             if (contract == null)
                 throw new KeyNotFoundException($"Contract with ID {id} not found.");
 
+            // Status changes are checked against lookup data so invalid status ids are not saved.
             var status = await _contractStatusRepository.GetByIdAsync(statusId);
             if (status == null)
                 throw new ArgumentException($"Contract status with ID {statusId} was not found.", nameof(statusId));
@@ -220,6 +227,7 @@ namespace GLMS.Api.Services
             if (contract.ClientId <= 0)
                 throw new ArgumentException("Valid client ID is required.", nameof(contract.ClientId));
 
+            // A contract must have a proper date range before it can be used for service requests.
             if (contract.StartDate >= contract.EndDate)
                 throw new ArgumentException("Start date must be before end date.");
         }
@@ -234,3 +242,5 @@ namespace GLMS.Api.Services
         //..............................................................................//
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

@@ -1,6 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ApplicationDbContextFactory
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The factory lets EF tooling create the DbContext without running the full API.
+
 namespace GLMS.Api.Data
 {
     public class ApplicationDbContextFactory : IDesignTimeDbContextFactory<ApplicationDbContext>
@@ -25,3 +32,5 @@ namespace GLMS.Api.Data
         }
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

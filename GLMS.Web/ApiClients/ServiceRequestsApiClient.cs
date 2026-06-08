@@ -6,6 +6,8 @@ using System.Text.Json.Serialization;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// The MVC frontend uses this API client to call the backend with HttpClient.
+
 namespace GLMS.Web.ApiClients
 {
 	public interface IServiceRequestsApiClient

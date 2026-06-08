@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// The MVC controller handles screen flow and calls the API instead of using SQL directly.
+
 namespace GLMS.Web.Controllers
 {
     [Authorize(Roles = ApplicationRoles.AllRoles)]
@@ -114,6 +116,7 @@ namespace GLMS.Web.Controllers
         {
             if (vm.SignedAgreementFile != null && vm.SignedAgreementFile.Length > 0)
             {
+                // The MVC side checks the file early, and the API still validates it again before saving.
                 if (!IsValidSignedAgreementPdf(vm.SignedAgreementFile))
                 {
                     ModelState.AddModelError(nameof(vm.SignedAgreementFile), "Only PDF files are allowed for signed agreements.");
@@ -142,6 +145,7 @@ namespace GLMS.Web.Controllers
             {
                 if (vm.SignedAgreementFile != null && vm.SignedAgreementFile.Length > 0)
                 {
+                    // The signed agreement is uploaded through the API after the contract record exists.
                     var uploadResult = await _contractsApiClient.UploadSignedAgreementAsync(result.Data.ContractId, vm.SignedAgreementFile);
                     if (!uploadResult.IsSuccess)
                     {
@@ -301,6 +305,7 @@ namespace GLMS.Web.Controllers
                 return RedirectToAction(nameof(Details), new { id = vm.ContractId });
             }
 
+            // Uploading through the API keeps document handling inside the backend project.
             var result = await _contractsApiClient.UploadSignedAgreementAsync(vm.ContractId, vm.File);
             if (result.IsSuccess)
             {
@@ -414,3 +419,5 @@ namespace GLMS.Web.Controllers
 }
 
 //.....................................o0oEND OF FILEo0o........................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

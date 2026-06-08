@@ -1,5 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ServiceRequestStatus
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// This model represents data that the API stores and works with in the database.
+
 namespace GLMS.Api.Models
 {
     public class ServiceRequestStatus
@@ -15,3 +22,5 @@ namespace GLMS.Api.Models
         public ICollection<ServiceRequest> ServiceRequests { get; set; } = new List<ServiceRequest>();
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

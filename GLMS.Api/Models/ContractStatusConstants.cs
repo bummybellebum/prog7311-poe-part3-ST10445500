@@ -3,6 +3,11 @@
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// These constants stop status and role id values from being repeated through the code.
+
+
+
+
 namespace GLMS.Api.Models
 {
     public static class ContractStatusConstants

@@ -1,3 +1,12 @@
+//ST10445500 - PROG7311 - GLMS POE
+//ApiErrorResponse
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// This helper keeps common API response details in one place.
+
+
+
 namespace GLMS.Api.ApiHelpers
 {
     public class ApiErrorResponse
@@ -17,3 +26,5 @@ namespace GLMS.Api.ApiHelpers
         public IReadOnlyList<string> Errors { get; }
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

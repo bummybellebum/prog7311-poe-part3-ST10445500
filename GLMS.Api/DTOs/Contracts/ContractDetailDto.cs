@@ -1,6 +1,13 @@
 using GLMS.Api.DTOs.Documents;
 using GLMS.Api.DTOs.ServiceRequests;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ContractDetailDto
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The DTO keeps API input and output simple instead of exposing full EF models.
+
 namespace GLMS.Api.DTOs.Contracts
 {
     public class ContractDetailDto
@@ -23,3 +30,5 @@ namespace GLMS.Api.DTOs.Contracts
         public List<ServiceRequestListDto> ServiceRequests { get; set; } = new();
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

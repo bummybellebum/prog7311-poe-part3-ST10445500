@@ -7,6 +7,8 @@ using System.Text.Json.Serialization;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// The service keeps business rules and validation away from the controller.
+
 namespace GLMS.Api.Services
 {
     public interface ICurrencyExchangeService
@@ -171,4 +173,3 @@ namespace GLMS.Api.Services
 }
 
 //.....................................o0oEND OF FILEo0o..........................................//
-

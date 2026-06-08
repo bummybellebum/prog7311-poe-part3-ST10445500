@@ -1,6 +1,12 @@
-﻿//ST10445500 - PROG7311 - GLMS POE
+//ST10445500 - PROG7311 - GLMS POE
+//ServiceRequestStatusConstants
 
 //.....................................o0oSTART OF FILEo0o........................................//
+
+// These constants stop status and role id values from being repeated through the code.
+
+
+
 
 namespace GLMS.Api.Models
 {

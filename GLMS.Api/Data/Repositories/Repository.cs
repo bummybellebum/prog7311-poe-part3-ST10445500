@@ -6,6 +6,8 @@ using System.Linq.Expressions;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// The repository keeps database query code in one layer instead of inside controllers.
+
 namespace GLMS.Api.Data.Repositories
 {
     public interface IRepository<T> where T : class
@@ -124,3 +126,5 @@ namespace GLMS.Api.Data.Repositories
 }
 
 //.....................................o0oEND OF FILEo0o........................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

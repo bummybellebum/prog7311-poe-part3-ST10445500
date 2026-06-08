@@ -10,6 +10,8 @@ using System.Text.Json.Serialization;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// The MVC frontend uses this API client to call the backend with HttpClient.
+
 namespace GLMS.Web.ApiClients
 {
 	public abstract class ApiClientBase(HttpClient httpClient, IHttpContextAccessor httpContextAccessor)
@@ -88,6 +90,7 @@ namespace GLMS.Web.ApiClients
 		{
 			try
 			{
+				// Multipart content lets the MVC frontend send uploaded files to the API over HTTP.
 				using var content = new MultipartFormDataContent();
 				await using var stream = file.OpenReadStream();
 				using var fileContent = new StreamContent(stream);
@@ -217,6 +220,7 @@ namespace GLMS.Web.ApiClients
 		{
 			try
 			{
+				// All frontend API calls go through HttpClient so the MVC project stays separate from the database.
 				return await HttpClient.SendAsync(request);
 			}
 			catch (HttpRequestException ex) when (ex.InnerException is SocketException)
@@ -240,6 +244,7 @@ namespace GLMS.Web.ApiClients
 			var token = _httpContextAccessor.HttpContext?.User.FindFirst("ApiToken")?.Value;
 			if (!string.IsNullOrWhiteSpace(token))
 			{
+				// The saved API token is forwarded so the backend can apply role-based authorization.
 				request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 			}
 		}

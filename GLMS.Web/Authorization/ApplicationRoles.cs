@@ -3,6 +3,11 @@
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// Authentication helpers keep role and testing login behaviour separate from controllers.
+
+
+
+
 namespace GLMS.Web.Authorization
 {
     public static class ApplicationRoles
@@ -20,3 +25,5 @@ namespace GLMS.Web.Authorization
 }
 
 //.....................................o0oEND OF FILEo0o........................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

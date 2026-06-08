@@ -5,7 +5,12 @@ using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
 using Microsoft.AspNetCore.Identity;
 
+//ST10445500 - PROG7311 - GLMS POE
+//AccountService
 
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The service keeps business rules and validation away from the controller.
 
 namespace GLMS.Api.Services
 {
@@ -381,3 +386,5 @@ namespace GLMS.Api.Services
         //..............................................................................//
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

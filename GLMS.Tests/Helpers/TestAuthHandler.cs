@@ -5,6 +5,13 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+//ST10445500 - PROG7311 - GLMS POE
+//TestAuthHandler
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// Test helpers keep repeated setup code out of the test classes.
+
 namespace GLMS.Tests.Helpers
 {
     public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
@@ -37,3 +44,5 @@ namespace GLMS.Tests.Helpers
         }
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

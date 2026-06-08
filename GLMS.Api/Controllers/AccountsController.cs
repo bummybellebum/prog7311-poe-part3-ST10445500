@@ -5,7 +5,12 @@ using GLMS.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+//ST10445500 - PROG7311 - GLMS POE
+//AccountsController
 
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The API controller receives HTTP requests and sends the work to services.
 
 namespace GLMS.Api.Controllers
 {
@@ -168,3 +173,5 @@ namespace GLMS.Api.Controllers
 	}
 
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

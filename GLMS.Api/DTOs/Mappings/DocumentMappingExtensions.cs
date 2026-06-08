@@ -1,6 +1,13 @@
 using GLMS.Api.DTOs.Documents;
 using GLMS.Api.Models;
 
+//ST10445500 - PROG7311 - GLMS POE
+//DocumentMappingExtensions
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// Mapping keeps the API DTO shapes separate from the EF database models.
+
 namespace GLMS.Api.DTOs.Mappings
 {
     public static class DocumentMappingExtensions
@@ -62,3 +69,5 @@ namespace GLMS.Api.DTOs.Mappings
         }
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

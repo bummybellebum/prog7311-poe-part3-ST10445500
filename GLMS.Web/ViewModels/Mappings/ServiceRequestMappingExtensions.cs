@@ -4,6 +4,13 @@ using GLMS.Web.ViewModels.ServiceRequests;
 //ST10445500 - PROG7311 - GLMS POE
 //ServiceRequestMappingExtensions
 
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// Mapping prepares API data for the MVC view models used by Razor screens.
+
+//ST10445500 - PROG7311 - GLMS POE
+//ServiceRequestMappingExtensions
+
 //..........................................o0oSTART OF FILEo0o..................................................//
 
 namespace GLMS.Web.ViewModels.Mappings
@@ -58,3 +65,5 @@ namespace GLMS.Web.ViewModels.Mappings
 }
 
 //..........................................o0oEND OF FILEo0o..................................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

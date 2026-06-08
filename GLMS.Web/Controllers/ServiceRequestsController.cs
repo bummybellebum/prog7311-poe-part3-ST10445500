@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// The MVC controller handles screen flow and calls the API instead of using SQL directly.
+
 namespace GLMS.Web.Controllers
 {
     [Authorize(Roles = ApplicationRoles.AllRoles)]
@@ -389,3 +391,5 @@ namespace GLMS.Web.Controllers
 }
 
 //.....................................o0oEND OF FILEo0o........................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

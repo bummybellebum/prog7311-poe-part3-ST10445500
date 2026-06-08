@@ -1,6 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ApiExceptionFilter
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// This helper turns API errors into clear HTTP responses for the frontend.
+
 namespace GLMS.Api.ApiHelpers
 {
 	public class ApiExceptionFilter : IExceptionFilter
@@ -38,3 +45,5 @@ namespace GLMS.Api.ApiHelpers
 		}
 	}
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

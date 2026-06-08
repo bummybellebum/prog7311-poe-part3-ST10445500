@@ -1,7 +1,14 @@
-﻿using GLMS.Api.Models;
+using GLMS.Api.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
+
+//ST10445500 - PROG7311 - GLMS POE
+//DemoSeedData
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// Seed data gives the system known starting records for testing and demo use.
 
 namespace GLMS.Api.Data.Seeding
 {
@@ -641,3 +648,5 @@ namespace GLMS.Api.Data.Seeding
 		private sealed record DemoFile(string RelativePath, long SizeBytes);
 	}
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

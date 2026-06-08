@@ -1,3 +1,12 @@
+//ST10445500 - PROG7311 - GLMS POE
+//ServiceRequestListDto
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The DTO keeps API input and output simple instead of exposing full EF models.
+
+
+
 namespace GLMS.Api.DTOs.ServiceRequests
 {
     public class ServiceRequestListDto
@@ -19,3 +28,5 @@ namespace GLMS.Api.DTOs.ServiceRequests
         public DateTime UpdatedAt { get; set; }
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

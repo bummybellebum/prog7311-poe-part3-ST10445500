@@ -3,6 +3,13 @@ using GLMS.Api.DTOs.Lookups;
 using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.Models;
 
+//ST10445500 - PROG7311 - GLMS POE
+//LookupService
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The service keeps business rules and validation away from the controller.
+
 namespace GLMS.Api.Services
 {
     //manages lookup data for statuses and reference information
@@ -110,4 +117,4 @@ namespace GLMS.Api.Services
     }
 }
 
-
+//.....................................o0oEND OF FILEo0o..........................................//

@@ -1,6 +1,13 @@
 using GLMS.Api.DTOs.ServiceRequests;
 using GLMS.Api.Models;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ServiceRequestMappingExtensions
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// Mapping keeps the API DTO shapes separate from the EF database models.
+
 namespace GLMS.Api.DTOs.Mappings
 {
     public static class ServiceRequestMappingExtensions
@@ -91,3 +98,5 @@ namespace GLMS.Api.DTOs.Mappings
         }
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

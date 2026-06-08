@@ -9,6 +9,8 @@ using Microsoft.Extensions.Options;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// Authentication helpers keep role and testing login behaviour separate from controllers.
+
 namespace GLMS.Web.Authorization.Testing
 {
     public class TestingAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>

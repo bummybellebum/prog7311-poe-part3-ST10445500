@@ -2,6 +2,13 @@ using System.Net;
 using GLMS.Api.Services;
 using Microsoft.Extensions.Configuration;
 
+//ST10445500 - PROG7311 - GLMS POE
+//CurrencyExchangeServiceTests
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The service tests check business rules without needing a browser or MVC page.
+
 namespace GLMS.Tests.UnitTests.Services
 {
     public class CurrencyExchangeServiceTests
@@ -85,3 +92,5 @@ namespace GLMS.Tests.UnitTests.Services
         }
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

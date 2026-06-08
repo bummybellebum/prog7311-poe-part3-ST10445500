@@ -3,6 +3,13 @@ using System.Net.Http.Json;
 using GLMS.Api.DTOs.ServiceRequests;
 using GLMS.Tests.Helpers;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ServiceRequestsApiTests
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The integration tests call the API through HTTP to check the real endpoints.
+
 namespace GLMS.Tests.IntegrationTests
 {
     public class ServiceRequestsApiTests
@@ -71,3 +78,5 @@ namespace GLMS.Tests.IntegrationTests
         }
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

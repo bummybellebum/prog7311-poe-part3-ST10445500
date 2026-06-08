@@ -1,5 +1,12 @@
 using GLMS.Api.Services;
 
+//ST10445500 - PROG7311 - GLMS POE
+//FakeCurrencyExchangeService
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// Test helpers keep repeated setup code out of the test classes.
+
 namespace GLMS.Tests.Helpers
 {
     public class FakeCurrencyExchangeService : ICurrencyExchangeService
@@ -31,3 +38,5 @@ namespace GLMS.Tests.Helpers
         }
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

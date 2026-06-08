@@ -6,6 +6,8 @@ using System.ComponentModel.DataAnnotations;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// This model represents data that the API stores and works with in the database.
+
 namespace GLMS.Api.Models
 {
     public class ApplicationUser : IdentityUser
@@ -29,3 +31,4 @@ namespace GLMS.Api.Models
 
 //.....................................o0oEND OF FILEo0o........................................//
 
+//.....................................o0oEND OF FILEo0o..........................................//

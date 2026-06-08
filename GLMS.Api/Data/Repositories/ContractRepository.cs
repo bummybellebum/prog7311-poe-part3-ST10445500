@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 //ContractRepository
 
 //.....................................o0oSTART OF FILEo0o........................................//
+
+// The repository keeps database query code in one layer instead of inside controllers.
+
 namespace GLMS.Api.Data.Repositories
 {
 	//this interface lets us do things with Contract data in the database.
@@ -54,6 +57,7 @@ namespace GLMS.Api.Data.Repositories
 		//gets one contract with all its documents and service requests.
 		public async Task<Contract?> GetContractWithDocumentsAndRequestsAsync(int contractId)
 		{
+			// Includes load the related data needed by the detail API response in one repository method.
 			return await Query()
 				.Include(c => c.Client)
 				.Include(c => c.ContractStatus)
@@ -76,6 +80,7 @@ namespace GLMS.Api.Data.Repositories
 		{
 			var query = GetContractListQuery();
 
+			// Optional filters are applied here so controllers do not build EF queries.
 			if (statusId.HasValue)
 				query = query.Where(c => c.ContractStatusId == statusId.Value);
 
@@ -134,3 +139,5 @@ namespace GLMS.Api.Data.Repositories
 }
 
 //.....................................o0oEND OF FILEo0o........................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// The repository keeps database query code in one layer instead of inside controllers.
+
 namespace GLMS.Api.Data.Repositories
 {
     public interface IUserRepository
@@ -160,3 +162,5 @@ namespace GLMS.Api.Data.Repositories
 }
 
 //.....................................o0oEND OF FILEo0o........................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

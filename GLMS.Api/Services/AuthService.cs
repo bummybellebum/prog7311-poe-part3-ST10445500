@@ -7,7 +7,12 @@ using GLMS.Api.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 
+//ST10445500 - PROG7311 - GLMS POE
+//AuthService
 
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The service keeps business rules and validation away from the controller.
 
 namespace GLMS.Api.Services
 {
@@ -75,6 +80,7 @@ namespace GLMS.Api.Services
                 return AuthServiceResult<AuthResponseDto>.Unauthorized("This account is inactive. Please contact an administrator.");
             }
 
+            // Identity checks the password and handles lockout rules for safer login attempts.
             var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
             if (!result.Succeeded)
             {
@@ -107,6 +113,7 @@ namespace GLMS.Api.Services
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var expiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpiresMinutes"] ?? "120"));
 
+            // The API puts user and role details into the token so protected endpoints can authorize requests.
             var claims = new List<Claim>
             {
                 new(JwtRegisteredClaimNames.Sub, user.Id),
@@ -134,3 +141,5 @@ namespace GLMS.Api.Services
 
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

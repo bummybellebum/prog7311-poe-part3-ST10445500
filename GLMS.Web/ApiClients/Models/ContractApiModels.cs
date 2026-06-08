@@ -1,4 +1,13 @@
 //ST10445500 - PROG7311 - GLMS POE
+//ContractApiModels
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// These API models match the JSON sent between the MVC frontend and the Web API.
+
+
+
+//ST10445500 - PROG7311 - GLMS POE
 //ContractDtos
 
 //..........................................o0oSTART OF FILEo0o..................................................//
@@ -54,3 +63,5 @@ namespace GLMS.Web.ApiClients.Models
 }
 
 //..........................................o0oEND OF FILEo0o..................................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

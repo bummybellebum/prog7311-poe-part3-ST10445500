@@ -6,7 +6,12 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ContractDocumentService
 
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The service keeps business rules and validation away from the controller.
 
 namespace GLMS.Api.Services
 {
@@ -231,6 +236,7 @@ namespace GLMS.Api.Services
             if (contract == null)
                 throw new KeyNotFoundException($"Contract with ID {contractId} not found.");
 
+            // File validation happens before saving so unsafe uploads are rejected early.
             await ValidatePdfFileAsync(file);
 
             var uploadFolder = GetUploadFolder();
@@ -258,6 +264,7 @@ namespace GLMS.Api.Services
             }
             catch
             {
+                // If the database save fails, remove the physical file so storage does not get out of sync.
                 if (File.Exists(physicalPath))
                 {
                     File.Delete(physicalPath);
@@ -311,6 +318,7 @@ namespace GLMS.Api.Services
             var header = new byte[5];
             await using var stream = file.OpenReadStream();
             var bytesRead = await stream.ReadAsync(header.AsMemory(0, header.Length));
+            // Checking the PDF header is stronger than only trusting the file extension.
             var hasPdfHeader = bytesRead == header.Length
                 && header[0] == '%'
                 && header[1] == 'P'
@@ -341,6 +349,7 @@ namespace GLMS.Api.Services
         private async Task<string> SaveFileAsync(IFormFile file, string uploadFolder, string storedFileName)
         {
             var fullPath = Path.GetFullPath(Path.Combine(uploadFolder, storedFileName));
+            // This prevents a file name or path from saving outside the configured upload folder.
             if (!IsPathInsideBase(fullPath, uploadFolder))
                 throw new InvalidOperationException("Invalid upload path.");
 
@@ -471,3 +480,5 @@ namespace GLMS.Api.Services
         //..............................................................................//
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

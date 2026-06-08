@@ -5,6 +5,8 @@ using System.ComponentModel.DataAnnotations;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// The view model contains only the data needed by the MVC screen.
+
 namespace GLMS.Web.ViewModels.Account
 {
     public class ProfileViewModel
@@ -23,3 +25,5 @@ namespace GLMS.Web.ViewModels.Account
 }
 
 //.....................................o0oEND OF FILEo0o........................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

@@ -4,6 +4,13 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 //ST10445500 - PROG7311 - GLMS POE
 //ContractViewModels
 
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The view model contains only the data needed by the MVC screen.
+
+//ST10445500 - PROG7311 - GLMS POE
+//ContractViewModels
+
 //..........................................o0oSTART OF FILEo0o..................................................//
 
 namespace GLMS.Web.ViewModels.Contracts
@@ -73,3 +80,5 @@ namespace GLMS.Web.ViewModels.Contracts
 }
 
 //..........................................o0oEND OF FILEo0o..................................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

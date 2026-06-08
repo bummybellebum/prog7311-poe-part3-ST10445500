@@ -1,6 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ContractDocument
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// This model represents data that the API stores and works with in the database.
+
 namespace GLMS.Api.Models
 {
     public class ContractDocument
@@ -46,3 +53,5 @@ namespace GLMS.Api.Models
         public ApplicationUser UploadedByUser { get; set; } = null!;
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

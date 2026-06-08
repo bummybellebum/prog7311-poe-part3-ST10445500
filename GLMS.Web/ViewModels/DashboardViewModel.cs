@@ -1,6 +1,15 @@
 //ST10445500 - PROG7311 - GLMS POE
 //DashboardViewModel
 
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The view model contains only the data needed by the MVC screen.
+
+
+
+//ST10445500 - PROG7311 - GLMS POE
+//DashboardViewModel
+
 //..........................................o0oSTART OF FILEo0o..................................................//
 
 namespace GLMS.Web.ViewModels
@@ -28,3 +37,5 @@ namespace GLMS.Web.ViewModels
 }
 
 //..........................................o0oEND OF FILEo0o..................................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

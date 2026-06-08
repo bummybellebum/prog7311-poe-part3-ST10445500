@@ -3,6 +3,13 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 //ST10445500 - PROG7311 - GLMS POE
 //ServiceRequestViewModels
 
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The view model contains only the data needed by the MVC screen.
+
+//ST10445500 - PROG7311 - GLMS POE
+//ServiceRequestViewModels
+
 //..........................................o0oSTART OF FILEo0o..................................................//
 
 namespace GLMS.Web.ViewModels.ServiceRequests
@@ -49,3 +56,5 @@ namespace GLMS.Web.ViewModels.ServiceRequests
 }
 
 //..........................................o0oEND OF FILEo0o..................................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

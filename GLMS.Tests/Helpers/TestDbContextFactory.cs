@@ -2,6 +2,13 @@ using GLMS.Api.Data;
 using GLMS.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
+//ST10445500 - PROG7311 - GLMS POE
+//TestDbContextFactory
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// Test helpers keep repeated setup code out of the test classes.
+
 namespace GLMS.Tests.Helpers
 {
     public static class TestDbContextFactory
@@ -78,3 +85,5 @@ namespace GLMS.Tests.Helpers
         }
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

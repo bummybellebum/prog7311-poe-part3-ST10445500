@@ -2,6 +2,13 @@ using GLMS.Api.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ApplicationDbContext
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The DbContext maps the GLMS models to the database tables used by the API.
+
 namespace GLMS.Api.Data
 {
 	public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
@@ -100,3 +107,5 @@ namespace GLMS.Api.Data
 		}
 	}
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

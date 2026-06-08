@@ -2,6 +2,13 @@ using GLMS.Api.Data.Repositories;
 using GLMS.Api.Models;
 using GLMS.Tests.Helpers;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ContractRepositoryTests
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The repository tests check database query behaviour without using the MVC frontend.
+
 namespace GLMS.Tests.UnitTests.Repositories
 {
     public class ContractRepositoryTests
@@ -46,3 +53,5 @@ namespace GLMS.Tests.UnitTests.Repositories
         }
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

@@ -3,7 +3,12 @@ using GLMS.Api.DTOs.Mappings;
 using GLMS.Api.DTOs.ServiceRequests;
 using GLMS.Api.Models;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ServiceRequestService
 
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The service keeps business rules and validation away from the controller.
 
 namespace GLMS.Api.Services
 {
@@ -251,6 +256,7 @@ namespace GLMS.Api.Services
 
             try
             {
+                // Currency conversion stays in the service because it is part of the business calculation.
                 var rate = await _currencyExchangeService.GetRateToZarAsync(currencyCode);
                 serviceRequest.OriginalCurrencyCode = currencyCode;
                 serviceRequest.ExchangeRateToZAR = rate;
@@ -262,6 +268,7 @@ namespace GLMS.Api.Services
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is HttpRequestException || ex is TaskCanceledException)
             {
+                // External service errors are converted into a message the API can return cleanly.
                 throw new InvalidOperationException($"Unable to convert {currencyCode} to ZAR right now. Please try again.", ex);
             }
         }
@@ -276,3 +283,5 @@ namespace GLMS.Api.Services
         //..............................................................................//
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

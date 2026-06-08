@@ -3,6 +3,13 @@ using GLMS.Web.ViewModels.Contracts;
 //ST10445500 - PROG7311 - GLMS POE
 //ClientViewModels
 
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The view model contains only the data needed by the MVC screen.
+
+//ST10445500 - PROG7311 - GLMS POE
+//ClientViewModels
+
 //..........................................o0oSTART OF FILEo0o..................................................//
 
 namespace GLMS.Web.ViewModels.Clients
@@ -41,3 +48,5 @@ namespace GLMS.Web.ViewModels.Clients
 }
 
 //..........................................o0oEND OF FILEo0o..................................................//
+
+//.....................................o0oEND OF FILEo0o..........................................//

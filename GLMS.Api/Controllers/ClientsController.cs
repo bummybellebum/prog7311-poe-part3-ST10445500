@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Mvc;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
+// The API controller receives HTTP requests and sends the work to services.
+
 namespace GLMS.Api.Controllers
 {
     [ApiController]

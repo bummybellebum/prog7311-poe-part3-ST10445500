@@ -4,6 +4,13 @@ using GLMS.Api.DTOs.Contracts;
 using GLMS.Api.Models;
 using GLMS.Tests.Helpers;
 
+//ST10445500 - PROG7311 - GLMS POE
+//ContractsApiTests
+
+//.....................................o0oSTART OF FILEo0o........................................//
+
+// The integration tests call the API through HTTP to check the real endpoints.
+
 namespace GLMS.Tests.IntegrationTests
 {
     public class ContractsApiTests
@@ -110,3 +117,5 @@ namespace GLMS.Tests.IntegrationTests
         }
     }
 }
+
+//.....................................o0oEND OF FILEo0o..........................................//

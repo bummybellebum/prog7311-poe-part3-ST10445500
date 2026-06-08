@@ -9,6 +9,9 @@ using System.Diagnostics;
 //HomeController
 
 //.....................................o0oSTART OF FILEo0o........................................//
+
+// The MVC controller handles screen flow and calls the API instead of using SQL directly.
+
 namespace GLMS.Web.Controllers
 {
     [Authorize]
