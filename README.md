@@ -336,6 +336,10 @@ https://youtu.be/O15G2dXdf_c
 
 ## References
 
+Docker Inc. (2026). *Docker Compose*. [online] Docker Docs. Available at: https://docs.docker.com/compose/ [Accessed 8 Jun. 2026].
+
+Docker Inc. (2026). *How Compose works*. [online] Docker Docs. Available at: https://docs.docker.com/compose/intro/compose-application-model/ [Accessed 8 Jun. 2026].
+
 Frankfurter. (2026). *Frankfurter*. [online] Available at: https://frankfurter.dev/ [Accessed 8 Jun. 2026].
 
 gewarren. (2025). *HttpClient guidelines for .NET - .NET*. [online] Microsoft.com. Available at: https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines [Accessed 8 Jun. 2026].
@@ -343,6 +347,10 @@ gewarren. (2025). *HttpClient guidelines for .NET - .NET*. [online] Microsoft.co
 Gudmestad, E. (2024). *ASP.NET Core MVC Tutorial - Full Course to Build YOUR Passion Project!* [online] YouTube. Available at: https://www.youtube.com/watch?v=q9X3SDEZtpw [Accessed 8 Jun. 2026].
 
 Iulian Oana. (2021). *Beginners ASP.NET Core Identity Tutorial*. [online] YouTube. Available at: https://www.youtube.com/watch?v=5UfJeDcoC1k [Accessed 8 Jun. 2026].
+
+Microsoft. (2026). *ASP.NET Core web API documentation with Swagger / OpenAPI*. [online] Microsoft Learn. Available at: https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger [Accessed 8 Jun. 2026].
+
+Microsoft. (2026). *Create web APIs with ASP.NET Core*. [online] Microsoft Learn. Available at: https://learn.microsoft.com/en-us/aspnet/core/web-api/ [Accessed 8 Jun. 2026].
 
 meaghanlewis. (2026). *Testing in .NET - .NET*. [online] Microsoft.com. Available at: https://learn.microsoft.com/en-us/dotnet/core/testing/ [Accessed 8 Jun. 2026].
 
