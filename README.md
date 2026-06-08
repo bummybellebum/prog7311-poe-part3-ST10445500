@@ -46,11 +46,9 @@ The system lets TechMove staff:
 
 ### Login & Dashboard
 
-> 📷 **Screenshot instructions:** Capture the login page, then log in as Admin and capture the main dashboard/home page. Place them side by side below.
-
 | Login Page | Dashboard (Admin View) |
 |:----------:|:----------------------:|
-| ![Login Page](docs/screenshots/login.png) | ![Dashboard](docs/screenshots/dashboard.png) |
+| ![Login Page](<img width="1873" height="1037" alt="image" src="https://github.com/user-attachments/assets/113aef82-ebfe-4481-8a6b-1566f5d74c19" />) | ![Dashboard](<img width="1874" height="1039" alt="image" src="https://github.com/user-attachments/assets/d2d2c8c0-13ec-465d-8f68-1aeba92976a0" />) |
 | *Screenshot: the GLMS login screen — navigate to `http://localhost:5004` and capture before logging in* | *Screenshot: the main dashboard or landing page after logging in as `admin@glms.co.za`* |
 
 ---
