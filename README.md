@@ -330,7 +330,7 @@ See the [Swagger screenshots](#swagger--api-documentation) above for what this l
 
 ## YouTube Video Link
 
-https://youtu.be/O15G2dXdf_c
+//insert here
 
 ---
 
