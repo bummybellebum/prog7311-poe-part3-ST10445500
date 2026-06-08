@@ -194,15 +194,15 @@ SQL Server database
 
 | Layer | Technology | Why I Used It |
 |-------|------------|---------------|
-| **Backend Framework** | ASP.NET Core Web API (`.NET 10`) | It is strongly typed, performant, and suitable for building enterprise-style .NET APIs. |
-| **Frontend Framework** | ASP.NET Core MVC | Razor views and controller-based routing kept the UI layer separate from the API and database logic. |
-| **ORM / Database Access** | Entity Framework Core + SQL Server | EF Core gave me code-first migrations, LINQ queries, and clean relationships without writing raw SQL everywhere. |
-| **Authentication** | ASP.NET Core Identity + JWT Bearer | Identity manages users and roles, while JWT tokens allow the API to authenticate requests without server-side sessions. |
-| **API Documentation** | Swagger / OpenAPI (Swashbuckle) | Swagger provides interactive API documentation and makes endpoints easier to test during development. |
-| **Currency Conversion** | Frankfurter API (external) | Frankfurter is a free exchange-rate API that does not require an API key, and I used it to convert foreign currency values to ZAR. |
-| **Testing** | xUnit + WebApplicationFactory | xUnit handles the tests, and `WebApplicationFactory` lets the integration tests call the API in memory. |
-| **Test Database** | EF Core InMemory Provider | The test suite can run with a clean isolated database without needing a live SQL Server instance. |
-| **Containerisation** | Docker + Docker Compose | Docker packages the API, MVC app, and SQL Server into containers that can run together in a repeatable way. |
+| **Backend Framework** | ASP.NET Core Web API (`.NET 10`) | I used this because it matched the .NET work I was already doing and made it easier to build API endpoints. |
+| **Frontend Framework** | ASP.NET Core MVC | I used MVC because it gave me Razor pages, controllers, and a clear way to build the frontend. |
+| **ORM / Database Access** | Entity Framework Core + SQL Server | I used this so I could work with database records through C# models instead of writing all the SQL manually. |
+| **Authentication** | ASP.NET Core Identity + JWT Bearer | I used Identity for users and roles, and JWT so the web app could send authenticated requests to the API. |
+| **API Documentation** | Swagger / OpenAPI (Swashbuckle) | I used Swagger because it made it easier to test and show the API endpoints. |
+| **Currency Conversion** | Frankfurter API (external) | I used this free API to handle the exchange-rate part of the project without needing an API key. |
+| **Testing** | xUnit + WebApplicationFactory | I used xUnit for tests, and `WebApplicationFactory` to test the API in a more realistic way. |
+| **Test Database** | EF Core InMemory Provider | I used this so the tests could run without needing a real SQL Server database. |
+| **Containerisation** | Docker + Docker Compose | I used Docker Compose so the database, API, and web app could all start together with one command. |
 
 ---
 
