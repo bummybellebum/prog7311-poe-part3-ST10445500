@@ -88,7 +88,7 @@ The system lets TechMove staff:
 
 | Local Tests Passing | GitHub Actions - CI Tests Passing |
 |:-------------------------------:|:---------------------------------:|
-| ![Tests Terminal](docs/screenshots/local-tests.png) | ![GitHub Actions CI](docs/screenshots/github-actions-ci.png) |
+| ![Tests Terminal](docs/screenshots/local-tests.png) | ![GitHub Actions CI](docs/screenshots/github-tests.png) |
 
 ---
 
