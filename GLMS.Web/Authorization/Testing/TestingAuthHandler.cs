@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using GLMS.Web.Security;
+using GLMS.Web.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 
@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
-namespace GLMS.Web.Security.Testing
+namespace GLMS.Web.Authorization.Testing
 {
     public class TestingAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {

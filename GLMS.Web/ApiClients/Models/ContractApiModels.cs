@@ -3,7 +3,7 @@
 
 //..........................................o0oSTART OF FILEo0o..................................................//
 
-namespace GLMS.Web.ApiModels
+namespace GLMS.Web.ApiClients.Models
 {
     public class ContractListDto
     {

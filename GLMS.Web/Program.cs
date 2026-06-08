@@ -1,6 +1,6 @@
 using GLMS.Web.ApiClients;
 using GLMS.Web.ApiClients.Testing;
-using GLMS.Web.Security.Testing;
+using GLMS.Web.Authorization.Testing;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;

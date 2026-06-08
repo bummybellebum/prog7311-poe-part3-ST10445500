@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using GLMS.Web.ApiClients;
-using GLMS.Web.ApiModels;
+using GLMS.Web.ApiClients.Models;
 using GLMS.Web.ViewModels.Account;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;

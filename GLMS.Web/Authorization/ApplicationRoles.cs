@@ -3,7 +3,7 @@
 
 //.....................................o0oSTART OF FILEo0o........................................//
 
-namespace GLMS.Web.Security
+namespace GLMS.Web.Authorization
 {
     public static class ApplicationRoles
     {

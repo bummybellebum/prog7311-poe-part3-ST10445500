@@ -1,4 +1,4 @@
-using GLMS.Web.ApiModels;
+using GLMS.Web.ApiClients.Models;
 using GLMS.Web.ViewModels.Contracts;
 
 //ST10445500 - PROG7311 - GLMS POE
@@ -6,7 +6,7 @@ using GLMS.Web.ViewModels.Contracts;
 
 //..........................................o0oSTART OF FILEo0o..................................................//
 
-namespace GLMS.Web.Mappings
+namespace GLMS.Web.ViewModels.Mappings
 {
     public static class ContractMappingExtensions
     {

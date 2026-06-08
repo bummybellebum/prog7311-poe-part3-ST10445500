@@ -1,4 +1,4 @@
-using GLMS.Web.ApiModels;
+using GLMS.Web.ApiClients.Models;
 
 //ST10445500 - PROG7311 - GLMS POE
 //AuthApiClient
