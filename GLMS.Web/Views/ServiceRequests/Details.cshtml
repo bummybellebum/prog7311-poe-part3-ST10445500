@@ -1,7 +1,7 @@
 @model GLMS.Web.ViewModels.ServiceRequests.ServiceRequestDetailsViewModel
 @{
     ViewData["Title"] = "Service Request Details";
-    var request = Model.Request;
+    var request = Model;
     var canEditRequests = User.IsInRole(ApplicationRoles.Admin);
     var canUpdateStatus = User.IsInRole(ApplicationRoles.Admin) || User.IsInRole(ApplicationRoles.LogisticsManager);
 }

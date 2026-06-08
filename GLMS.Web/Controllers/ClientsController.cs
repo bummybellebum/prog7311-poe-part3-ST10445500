@@ -2,6 +2,7 @@ using GLMS.Web.Security;
 using GLMS.Web.Services;
 using GLMS.Web.ApiModels;
 using GLMS.Web.ViewModels.Clients;
+using GLMS.Web.ViewModels.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -30,13 +31,16 @@ namespace GLMS.Web.Controllers
                 var clients = await _clientService.GetAllAsync(search);
 
                 ViewData["Search"] = search;
-                return View(clients.OrderBy(c => c.CompanyName).ToList());
+                return View(clients
+                    .OrderBy(c => c.CompanyName)
+                    .Select(ToClientListItemViewModel)
+                    .ToList());
             }
             catch (ApiUnavailableException ex)
             {
                 ViewData["Search"] = search;
                 ViewData["ErrorMessage"] = ex.Message;
-                return View(new List<ClientListDto>());
+                return View(new List<ClientListItemViewModel>());
             }
         }
 
@@ -50,16 +54,7 @@ namespace GLMS.Web.Controllers
                 return NotFound();
             }
 
-            var activeCount = client.Contracts.Count(c => string.Equals(c.ContractStatusName, "Active", StringComparison.OrdinalIgnoreCase));
-
-            var vm = new ClientDetailsViewModel
-            {
-                Client = client,
-                ContractCount = client.Contracts.Count,
-                ActiveContractCount = activeCount
-            };
-
-            return View(vm);
+            return View(ToClientDetailsViewModel(client));
         }
 
         //........................................................................................//
@@ -182,7 +177,7 @@ namespace GLMS.Web.Controllers
                 return NotFound();
             }
 
-            return View(client);
+            return View(ToClientDeleteViewModel(client));
         }
 
         //........................................................................................//
@@ -206,6 +201,64 @@ namespace GLMS.Web.Controllers
         }
 
         //........................................................................................//
+
+        private static ClientListItemViewModel ToClientListItemViewModel(ClientListDto client)
+        {
+            return new ClientListItemViewModel
+            {
+                ClientId = client.ClientId,
+                CompanyName = client.CompanyName,
+                Email = client.Email,
+                Region = client.Region,
+                Country = client.Country,
+                IsActive = client.IsActive
+            };
+        }
+
+        private static ClientDetailsViewModel ToClientDetailsViewModel(ClientDetailDto client)
+        {
+            return new ClientDetailsViewModel
+            {
+                ClientId = client.ClientId,
+                CompanyName = client.CompanyName,
+                Email = client.Email,
+                Phone = client.Phone,
+                Region = client.Region,
+                Country = client.Country,
+                IsActive = client.IsActive,
+                ContractCount = client.Contracts.Count,
+                ActiveContractCount = client.Contracts.Count(c => string.Equals(c.ContractStatusName, "Active", StringComparison.OrdinalIgnoreCase)),
+                Contracts = client.Contracts
+                    .OrderByDescending(c => c.CreatedAt)
+                    .Select(ToContractListItemViewModel)
+                    .ToList()
+            };
+        }
+
+        private static ContractListItemViewModel ToContractListItemViewModel(ContractListDto contract)
+        {
+            return new ContractListItemViewModel
+            {
+                ContractId = contract.ContractId,
+                Title = contract.Title,
+                ClientName = contract.ClientName,
+                ContractStatusName = contract.ContractStatusName,
+                StartDate = contract.StartDate,
+                EndDate = contract.EndDate,
+                CreatedAt = contract.CreatedAt
+            };
+        }
+
+        private static ClientDeleteViewModel ToClientDeleteViewModel(ClientDetailDto client)
+        {
+            return new ClientDeleteViewModel
+            {
+                ClientId = client.ClientId,
+                CompanyName = client.CompanyName,
+                Email = client.Email,
+                IsActive = client.IsActive
+            };
+        }
 
     }
 }

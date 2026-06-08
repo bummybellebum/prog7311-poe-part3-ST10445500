@@ -2,6 +2,7 @@ using GLMS.Web.Security;
 using GLMS.Web.Services;
 using GLMS.Web.ApiModels;
 using GLMS.Web.ViewModels.Contracts;
+using GLMS.Web.ViewModels.ServiceRequests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -39,7 +40,10 @@ namespace GLMS.Web.Controllers
         {
             var contracts = await _contractService.FilterAsync(filter.StatusId, filter.StartDate, filter.EndDate, filter.ClientId);
 
-            filter.Contracts = contracts.OrderByDescending(c => c.CreatedAt).ToList();
+            filter.Contracts = contracts
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(ToContractListItemViewModel)
+                .ToList();
             await PopulateFilterOptionsAsync(filter);
 
             return View(filter);
@@ -62,10 +66,13 @@ namespace GLMS.Web.Controllers
 
             var vm = new ContractDetailsViewModel
             {
-                Contract = contract,
-                Documents = documents,
-                CurrentSignedAgreement = current,
-                ServiceRequests = contract.ServiceRequests.OrderByDescending(sr => sr.RequestedAt).ToList()
+                Contract = ToContractDetailViewModel(contract),
+                Documents = documents.Select(ToContractDocumentItemViewModel).ToList(),
+                CurrentSignedAgreement = current == null ? null : ToContractDocumentItemViewModel(current),
+                ServiceRequests = contract.ServiceRequests
+                    .OrderByDescending(sr => sr.RequestedAt)
+                    .Select(ToServiceRequestListItemViewModel)
+                    .ToList()
             };
 
             var statuses = await _lookupService.GetContractStatusesAsync();
@@ -239,7 +246,7 @@ namespace GLMS.Web.Controllers
                 return NotFound();
             }
 
-            return View(contract);
+            return View(ToContractDeleteViewModel(contract));
         }
 
         //........................................................................................//
@@ -387,6 +394,74 @@ namespace GLMS.Web.Controllers
                 || string.Equals(contentType, "application/octet-stream", StringComparison.OrdinalIgnoreCase);
 
             return string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase) && isAllowedContentType;
+        }
+
+        private static ContractListItemViewModel ToContractListItemViewModel(ContractListDto contract)
+        {
+            return new ContractListItemViewModel
+            {
+                ContractId = contract.ContractId,
+                Title = contract.Title,
+                ClientName = contract.ClientName,
+                ContractStatusName = contract.ContractStatusName,
+                StartDate = contract.StartDate,
+                EndDate = contract.EndDate,
+                CreatedAt = contract.CreatedAt
+            };
+        }
+
+        private static ContractDetailViewModel ToContractDetailViewModel(ContractDetailDto contract)
+        {
+            return new ContractDetailViewModel
+            {
+                ContractId = contract.ContractId,
+                ClientId = contract.ClientId,
+                Title = contract.Title,
+                ClientName = contract.ClientName,
+                StartDate = contract.StartDate,
+                EndDate = contract.EndDate,
+                ContractStatusId = contract.ContractStatusId,
+                ContractStatusName = contract.ContractStatusName,
+                ServiceLevel = contract.ServiceLevel,
+                CreatedAt = contract.CreatedAt,
+                Notes = contract.Notes
+            };
+        }
+
+        private static ContractDocumentItemViewModel ToContractDocumentItemViewModel(ContractDocumentDto document)
+        {
+            return new ContractDocumentItemViewModel
+            {
+                ContractDocumentId = document.ContractDocumentId,
+                OriginalFileName = document.OriginalFileName,
+                UploadedAt = document.UploadedAt
+            };
+        }
+
+        private static ServiceRequestListItemViewModel ToServiceRequestListItemViewModel(ServiceRequestListDto request)
+        {
+            return new ServiceRequestListItemViewModel
+            {
+                ServiceRequestId = request.ServiceRequestId,
+                ContractId = request.ContractId,
+                ContractTitle = request.ContractTitle,
+                ServiceRequestStatusName = request.ServiceRequestStatusName,
+                AmountOriginal = request.AmountOriginal,
+                OriginalCurrencyCode = request.OriginalCurrencyCode,
+                AmountZAR = request.AmountZAR,
+                RequestedAt = request.RequestedAt
+            };
+        }
+
+        private static ContractDeleteViewModel ToContractDeleteViewModel(ContractDetailDto contract)
+        {
+            return new ContractDeleteViewModel
+            {
+                ContractId = contract.ContractId,
+                Title = contract.Title,
+                ClientName = contract.ClientName,
+                ContractStatusName = contract.ContractStatusName
+            };
         }
 
     }
