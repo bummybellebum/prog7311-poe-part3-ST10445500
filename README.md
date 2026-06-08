@@ -305,16 +305,38 @@ JWTs are stateless - the API doesn't need to store session data. This makes the 
 
 ---
 
-## 📝 POE Submission Notes
+## 🎥 YouTube Video Link
 
-| Part | Deliverables |
-|------|-------------|
-| **Part 1** | Architecture report (PDF), framework diagram, UML class diagram for design patterns |
-| **Part 2** | GitHub repo, EF Core migrations, test screenshots, demo video |
-| **Part 3** | GitHub repo, Dockerfiles, docker-compose.yml, Docker Desktop screenshots, reflection report (PDF), demo video |
-
-> ⚠️ Submission without a GitHub link results in a **5% deduction** per part.
+https://youtu.be/O15G2dXdf_c
 
 ---
 
-*Built for PROG7311 / EAPD7111 - IIE 2026*
+## 🤖 AI Assistance Declaration
+
+AI tools were used as support during the project, but the final implementation and testing reviewed and adjusted by myself.
+
+* **GitHub Copilot** was used to assist with the testing setup and to help define the scope of the automated tests.
+* **ChatGPT** was used to assist with generating site style visuals and styling ideas for the login page and related frontend presentation.
+* **ChatGPT** was used to assist with the formatting and style visuals of the README doc.
+
+---
+
+## 📚 References
+
+Frankfurter. (2026). *Frankfurter*. [online] Available at: https://frankfurter.dev/ [Accessed 8 Jun. 2026].
+
+gewarren. (2025). *HttpClient guidelines for .NET - .NET*. [online] Microsoft.com. Available at: https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines [Accessed 8 Jun. 2026].
+
+Gudmestad, E. (2024). *ASP.NET Core MVC Tutorial – Full Course to Build YOUR Passion Project!* [online] YouTube. Available at: https://www.youtube.com/watch?v=q9X3SDEZtpw [Accessed 8 Jun. 2026].
+
+Iulian Oana. (2021). *Beginners ASP.NET Core Identity Tutorial*. [online] YouTube. Available at: https://www.youtube.com/watch?v=5UfJeDcoC1k [Accessed 8 Jun. 2026].
+
+meaghanlewis. (2026). *Testing in .NET - .NET*. [online] Microsoft.com. Available at: https://learn.microsoft.com/en-us/dotnet/core/testing/ [Accessed 8 Jun. 2026].
+
+SamMonoRT. (2024). *Overview of Entity Framework Core - EF Core*. [online] Microsoft.com. Available at: https://learn.microsoft.com/en-us/ef/core/ [Accessed 8 Jun. 2026].
+
+tdykstra. (2025). *Integration tests in ASP.NET Core*. [online] Microsoft.com. Available at: https://learn.microsoft.com/en-us/aspnet/core/test/integration-tests?view=aspnetcore-10.0&pivots=xunit [Accessed 8 Jun. 2026].
+
+wadepickett. (2025). *Introduction to Identity on ASP.NET Core*. [online] Microsoft.com. Available at: https://learn.microsoft.com/en-us/aspnet/core/security/authentication/identity?view=aspnetcore-10.0 [Accessed 8 Jun. 2026].
+
+---
