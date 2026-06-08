@@ -13,6 +13,7 @@ namespace GLMS.Web.ViewModels
         public int ExpiredOrOnHoldContracts { get; set; }
         public int TotalServiceRequests { get; set; }
         public int PendingServiceRequests { get; set; }
+        public int CompletedServiceRequests { get; set; }
         public List<RecentServiceRequestItemViewModel> RecentServiceRequests { get; set; } = new();
     }
 

@@ -19,6 +19,7 @@
     var displayName = User.Identity?.Name ?? "User";
     var userInitial = string.IsNullOrWhiteSpace(displayName) ? "U" : displayName.Substring(0, 1).ToUpperInvariant();
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var pageTitle = ViewData["Title"]?.ToString() ?? "Dashboard";
     string NavClass(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? "sidebar-link active" : "sidebar-link";
     string MobileNavClass(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? "mobile-nav-link active" : "mobile-nav-link";
 }
@@ -28,10 +29,18 @@
         <div class="app-shell">
             <aside class="app-sidebar">
                 <a class="brand-block text-decoration-none" asp-controller="Home" asp-action="Index">
-                    <span class="brand-mark" aria-hidden="true">GL</span>
+                    <span class="shell-brand-mark" aria-hidden="true">
+                        <svg viewBox="0 0 64 64" focusable="false">
+                            <circle cx="32" cy="32" r="25" />
+                            <path d="M7 32h50" />
+                            <path d="M32 7c8 7 12 15 12 25S40 50 32 57" />
+                            <path d="M32 7C24 14 20 22 20 32s4 18 12 25" />
+                            <path d="M13 20c7 4 14 6 19 6s12-2 19-6" />
+                            <path d="M13 44c7-4 14-6 19-6s12 2 19 6" />
+                        </svg>
+                    </span>
                     <span>
                         <span class="brand-title">GLMS</span>
-                        <span class="brand-subtitle">Global Logistics<br />Management System</span>
                     </span>
                 </a>
 
@@ -95,7 +104,16 @@
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
                     </button>
                     <a class="mobile-brand text-decoration-none" asp-controller="Home" asp-action="Index">
-                        <span class="brand-mark brand-mark-sm" aria-hidden="true">GL</span>
+                        <span class="shell-brand-mark shell-brand-mark-sm" aria-hidden="true">
+                            <svg viewBox="0 0 64 64" focusable="false">
+                                <circle cx="32" cy="32" r="25" />
+                                <path d="M7 32h50" />
+                                <path d="M32 7c8 7 12 15 12 25S40 50 32 57" />
+                                <path d="M32 7C24 14 20 22 20 32s4 18 12 25" />
+                                <path d="M13 20c7 4 14 6 19 6s12-2 19-6" />
+                                <path d="M13 44c7-4 14-6 19-6s12 2 19 6" />
+                            </svg>
+                        </span>
                         <span>GLMS</span>
                     </a>
                     <a class="icon-button" asp-controller="Account" asp-action="Profile" aria-label="Profile">
@@ -104,28 +122,26 @@
                 </header>
 
                 <header class="topbar">
-                    <div>
-                        <div class="topbar-label">Current workspace</div>
-                        <div class="fw-semibold">@roleName</div>
+                    <div class="topbar-title">
+                        <button class="topbar-menu-button" type="button" aria-label="Main menu">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+                        </button>
+                        <span>@pageTitle</span>
                     </div>
                     <div class="topbar-actions">
-                        @if (canManageContracts)
-                        {
-                            <a class="btn btn-sm btn-primary" asp-controller="Clients" asp-action="Create">Add Client</a>
-                            <a class="btn btn-sm btn-accent" asp-controller="Contracts" asp-action="Create">New Contract</a>
-                        }
-                        @if (canCreateRequests)
-                        {
-                            <a class="btn btn-sm btn-primary" asp-controller="ServiceRequests" asp-action="Create">Create Request</a>
-                        }
-                        <div class="vr d-none d-md-block"></div>
+                        <button class="topbar-icon-button" type="button" aria-label="Notifications">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 1 0-12 0c0 7-2.5 7-2.5 7h17S18 16 18 9" /><path d="M9.8 19a2.3 2.3 0 0 0 4.4 0" /></svg>
+                        </button>
+                        <button class="topbar-icon-button" type="button" aria-label="Help">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.7 9a2.5 2.5 0 0 1 4.8 1c0 1.8-2.4 2-2.4 3.6" /><path d="M12 17h.1" /></svg>
+                        </button>
                         <a class="account-pill" asp-controller="Account" asp-action="Profile">
                             <span class="account-avatar" aria-hidden="true">@userInitial</span>
-                            <span class="account-name">@displayName</span>
+                            <span class="account-copy">
+                                <span class="account-name">@displayName</span>
+                                <span class="account-role">@roleName</span>
+                            </span>
                         </a>
-                        <form class="d-inline" asp-controller="Account" asp-action="Logout" method="post">
-                            <button type="submit" class="btn btn-sm btn-outline-dark">Logout</button>
-                        </form>
                     </div>
                 </header>
 

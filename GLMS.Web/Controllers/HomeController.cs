@@ -48,6 +48,7 @@ namespace GLMS.Web.Controllers
                         || string.Equals(c.ContractStatusName, "On Hold", StringComparison.OrdinalIgnoreCase)),
                     TotalServiceRequests = serviceRequests.Count,
                     PendingServiceRequests = serviceRequests.Count(sr => string.Equals(sr.ServiceRequestStatusName, "Pending", StringComparison.OrdinalIgnoreCase)),
+                    CompletedServiceRequests = serviceRequests.Count(sr => string.Equals(sr.ServiceRequestStatusName, "Completed", StringComparison.OrdinalIgnoreCase)),
                     RecentServiceRequests = serviceRequests
                         .OrderByDescending(sr => sr.RequestedAt)
                         .Take(5)
